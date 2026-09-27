@@ -15,7 +15,7 @@ const defaultSettings: UiSettings = {
 }
 
 export default function App() {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const [settings, setSettings] = useState<UiSettings>(defaultSettings)
 
   const update = <K extends keyof UiSettings>(key: K, value: UiSettings[K]) =>

@@ -17,6 +17,11 @@ export const waitSettled = async (p, timeout = 20000) => {
  * so there is a settled, derived node with an action ring to work with.
  */
 export const seedGraph = async (p, prompt = 'test prompt') => {
+  // The canvas starts empty; create the input first.
+  if ((await p.locator('.node-input').count()) === 0) {
+    await p.locator('.stage-add').click()
+    await p.waitForTimeout(200)
+  }
   const field = p.locator('.node-input').first()
   await field.click()
   await field.fill(prompt)

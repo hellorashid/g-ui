@@ -24,7 +24,16 @@ const positions = () => p.evaluate(() =>
   })))
 
 // Drive a labelled slider to an exact value.
+// The sidebar starts collapsed; open it before reaching for a slider.
+const openPanel = async () => {
+  if ((await p.locator('.sidebar--collapsed').count()) > 0) {
+    await p.locator('.sidebar--collapsed .icon-btn').first().click()
+    await p.waitForTimeout(200)
+  }
+}
+
 const setSlider = async (label, v) => {
+  await openPanel()
   const field = p.locator('.field', { has: p.locator('.field-label', { hasText: label }) })
   await field.locator('input[type=range]').evaluate((el, val) => {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
@@ -37,64 +46,98 @@ const setSlider = async (label, v) => {
 await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
 await seedGraph(p)
 await p.locator('.node:not(.node--input)').first().click(); await p.waitForTimeout(250)
-await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(0).click()  // Connect, straight up
+// Skip the retry wedge, which re-runs instead of spawning.
+await p.locator('.node-slot--menu').first().locator('.wedge:not(.wedge--retry)').first().click()
 await waitSettled()
 
 // Layout constants, mirrored from src/layout.ts.
 const NODE_R = 100, MENU_R = 180, BASE = 3, PER = 52
-const thoughts = await p.locator('.gpath').first().locator('.thought').count()
+// The path just created, and the span it should produce.
+const thoughts = await p.locator('.gpath').last().locator('.thought').count()
+
+/** Centre-to-centre span of the newest path, independent of origin. */
+const span = () => p.evaluate(() => {
+  const NUM = /-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi
+  const at = e => { const m = new DOMMatrix(getComputedStyle(e).transform); return [m.e, m.f] }
+  const slots = [...document.querySelectorAll('.node-slot--node')].map(at)
+  const near = (x, y) => slots.reduce((b, q) =>
+    Math.hypot(q[0]-x, q[1]-y) < Math.hypot(b[0]-x, b[1]-y) ? q : b, slots[0])
+  const g = [...document.querySelectorAll('.gpath')].pop()
+  const [x1, y1, x2, y2] = g.querySelector('path').getAttribute('d').match(NUM).map(Number)
+  const a = near(x1, y1), b = near(x2, y2)
+  return Math.round(Math.hypot(b[0]-a[0], b[1]-a[1]))
+})
 // reach = menuRadius + nodeRadius + gapFor(thoughts, spawnGap)
 const reachAt = (gap, nodeR = NODE_R) =>
   MENU_R + nodeR + Math.max(90, gap + (thoughts - BASE) * PER)
 
 console.log('\nspawn gap moves existing nodes')
 const shown190 = await setSlider('Spawn gap', 190)
-const at190 = await positions()
+const at190 = await span()
 check('label reflects the value', shown190 === '190px', shown190)
-check('child sits at the computed reach', at190.link[1] === -reachAt(190),
-  `${at190.link[1]} vs -${reachAt(190)} (${thoughts} thoughts)`)
+check('child sits at the computed reach', at190 === reachAt(190),
+  `${at190} vs ${reachAt(190)} (${thoughts} thoughts)`)
 
 const shown320 = await setSlider('Spawn gap', 320)
-const at320 = await positions()
+const at320 = await span()
 check('label updates', shown320 === '320px', shown320)
-check('EXISTING node re-flows with the slider', at320.link[1] === -reachAt(320),
-  `${at190.link[1]} -> ${at320.link[1]} (expect -${reachAt(320)})`)
+check('EXISTING node re-flows with the slider', at320 === reachAt(320),
+  `${at190} -> ${at320} (expect ${reachAt(320)})`)
 
 const shown120 = await setSlider('Spawn gap', 120)
-const at120 = await positions()
-check('slider pulls nodes back in', at120.link[1] === -reachAt(120),
-  `${at320.link[1]} -> ${at120.link[1]} (expect -${reachAt(120)})`)
+const at120 = await span()
+check('slider pulls nodes back in', at120 === reachAt(120),
+  `${at320} -> ${at120} (expect ${reachAt(120)})`)
 
 console.log('\nnode radius also re-flows the graph')
 await setSlider('Spawn gap', 190)
-const beforeR = (await positions()).link[1]
+const beforeR = await span()
 await setSlider('Node radius', 140)
-const afterR = (await positions()).link[1]
-check('larger nodes push children out', afterR < beforeR, `${beforeR} -> ${afterR}`)
+const afterR = await span()
+check('larger nodes push children out', afterR > beforeR, `${beforeR} -> ${afterR}`)
 await setSlider('Node radius', NODE_R)
 
 console.log('\ndeep chains stay consistent')
-await p.locator('.node-slot--menu').nth(1).locator('.wedge').nth(1).click()
+// Branch again so the graph is three deep, then check the invariant
+// on every path at once: span == menu + node + gap(its own thoughts).
+// Bring everything on screen first; a node under the sidebar or off
+// the viewport cannot be clicked.
+await p.keyboard.press('f'); await p.waitForTimeout(600)
+await p.locator('.node:not(.node--input)').last().click({ force: true })
+await p.waitForTimeout(300)
+await p.locator('.node-slot--menu').last().locator('.wedge:not(.wedge--retry)').first().click()
 await waitSettled()
-const chain = await positions()
-check('three nodes placed', Object.keys(chain).length === 3, JSON.stringify(chain))
-// grandchild = child + one reach along its own bearing
-const gk = Object.keys(chain).find(k => k !== 'input' && k !== 'link')
-// The grandchild's own path may carry a different number of thoughts.
-const gThoughts = await p.evaluate(() =>
-  Math.min(...[...document.querySelectorAll('.gpath')].map(g => g.querySelectorAll('.thought').length)) === 0
-    ? 0
-    : [...document.querySelectorAll('.gpath')].map(g => g.querySelectorAll('.thought').length)[1])
-const gReach = MENU_R + NODE_R + Math.max(90, 190 + (gThoughts - BASE) * PER)
-const expX = Math.round(chain.link[0] + Math.cos((60-90)*Math.PI/180) * gReach)
-const expY = Math.round(chain.link[1] + Math.sin((60-90)*Math.PI/180) * gReach)
-check('grandchild placed off its own parent', Math.abs(chain[gk][0]-expX) <= 1 && Math.abs(chain[gk][1]-expY) <= 1,
-  `${JSON.stringify(chain[gk])} vs expected [${expX}, ${expY}]`)
+
+const allSpans = () => p.evaluate(() => {
+  const NUM = /-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi
+  const at = e => { const m = new DOMMatrix(getComputedStyle(e).transform); return [m.e, m.f] }
+  const slots = [...document.querySelectorAll('.node-slot--node')].map(at)
+  const near = (x, y) => slots.reduce((b, q) =>
+    Math.hypot(q[0]-x, q[1]-y) < Math.hypot(b[0]-x, b[1]-y) ? q : b, slots[0])
+  return [...document.querySelectorAll('.gpath')].map(g => {
+    const [x1, y1, x2, y2] = g.querySelector('path').getAttribute('d').match(NUM).map(Number)
+    const a = near(x1, y1), b = near(x2, y2)
+    return { thoughts: g.querySelectorAll('.thought').length,
+             span: Math.round(Math.hypot(b[0]-a[0], b[1]-a[1])) }
+  })
+})
+
+await setSlider('Spawn gap', 190)
+const chain = await allSpans()
+check('the graph has several paths', chain.length >= 2, `${chain.length} paths`)
+check('with differing chain lengths',
+  new Set(chain.map(c => c.thoughts)).size >= 2,
+  chain.map(c => c.thoughts + 't').join(' '))
+const predicted = (t, gap) => MENU_R + NODE_R + Math.max(90, gap + (t - BASE) * PER)
+check('every path spans its own thought count',
+  chain.every(c => Math.abs(c.span - predicted(c.thoughts, 190)) <= 1),
+  chain.map(c => `${c.thoughts}t=${c.span}(want ${predicted(c.thoughts,190)})`).join(' '))
 
 await setSlider('Spawn gap', 260)
-const moved = await positions()
-check('whole chain re-flows together', moved[gk][1] !== chain[gk][1] && moved.link[1] !== chain.link[1],
-  `link ${chain.link[1]}->${moved.link[1]}, leaf ${chain[gk][1]}->${moved[gk][1]}`)
+const moved = await allSpans()
+check('whole chain re-flows together',
+  moved.every(c => Math.abs(c.span - predicted(c.thoughts, 260)) <= 1),
+  moved.map(c => `${c.thoughts}t=${c.span}`).join(' '))
 
 await p.keyboard.press('f'); await p.waitForTimeout(500)
 await p.screenshot({ path: 'tests/layout.png' })

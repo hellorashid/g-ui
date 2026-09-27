@@ -165,3 +165,44 @@
   background: var(--accent);
   border-color: var(--accent);
 }
+
+/* Shown only on an empty canvas, where the plus is the sole way in. */
+.stage-empty {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 36px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--muted);
+  transition:
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.stage-empty:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.stage-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.stage-empty-text {
+  font-size: 13px;
+}

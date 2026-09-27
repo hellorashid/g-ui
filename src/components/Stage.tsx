@@ -73,14 +73,13 @@ const makeInput = (id: string, x = 0, y = 0): GNode => ({
   seed: { x, y },
 })
 
-const ROOT = makeInput('n1')
-
 /**
  * The main desktop: where the visual interface gets rendered.
  * No chrome — the surface runs edge to edge.
  */
 export default function Stage({ settings }: Props) {
-  const [nodes, setNodes] = useState<GNode[]>([ROOT])
+  // The canvas starts empty; the plus button adds the first input.
+  const [nodes, setNodes] = useState<GNode[]>([])
   const [paths, setPaths] = useState<GPath[]>([])
   /**
    * Rings come in two flavours:
@@ -409,6 +408,13 @@ export default function Stage({ settings }: Props) {
         </button>
         <span className="stage-zoom">{Math.round(viewport.zoom * 100)}%</span>
       </div>
+
+      {placed.length === 0 && (
+        <button className="stage-empty" onClick={addInput}>
+          <span className="stage-empty-mark">+</span>
+          <span className="stage-empty-text">Start with an input</span>
+        </button>
+      )}
 
       <button className="stage-add" onClick={addInput} title="New input node">
         +

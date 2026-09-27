@@ -20,15 +20,20 @@ const waitSettled = async (timeout = 20000) => {
 
 await p.goto('http://localhost:5173/?speed=5', { waitUntil: 'networkidle' })
 
-console.log('\nthe canvas starts with an input node')
-check('one node', (await count('.node')) === 1, `${await count('.node')}`)
-check('it is an input node', (await count('.node--input')) === 1)
+console.log('\nthe canvas starts empty')
+check('no nodes', (await count('.node')) === 0, `${await count('.node')}`)
+check('an empty-state prompt is shown', (await count('.stage-empty')) === 1)
+check('plus button exists', (await count('.stage-add')) === 1)
+
+console.log('\nthe plus button creates an input')
+await p.locator('.stage-add').click(); await p.waitForTimeout(400)
+check('one input appeared', (await count('.node--input')) === 1, `${await count('.node--input')}`)
 check('it has a text field', (await count('.node-input')) === 1)
 check('the field starts empty', (await p.locator('.node-input').inputValue()) === '')
 check('no ring on an input node', (await count('.node-slot--menu')) === 0)
+check('empty state is gone', (await count('.stage-empty')) === 0)
 
 console.log('\nthe plus button creates another input')
-check('plus button exists', (await count('.stage-add')) === 1)
 await p.locator('.stage-add').click(); await p.waitForTimeout(500)
 check('a second input appeared', (await count('.node--input')) === 2, `${await count('.node--input')}`)
 const apart = await p.evaluate(() => {
