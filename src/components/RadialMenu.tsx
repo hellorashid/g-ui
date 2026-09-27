@@ -82,6 +82,7 @@ export default function RadialMenu({
                 active && 'wedge--active',
                 selected && 'wedge--selected',
                 action.retry && 'wedge--retry',
+                action.self && 'wedge--self',
               ]
                 .filter(Boolean)
                 .join(' ')}
@@ -107,7 +108,16 @@ export default function RadialMenu({
         {focused ? (
           <>
             <span className="radial-label">{focused.label}</span>
-            <span className="radial-hint">{focused.hint}</span>
+            {focused.detail && (
+              <span className="radial-detail">“{focused.detail}”</span>
+            )}
+            <span
+              className={
+                focused.self ? 'radial-hint radial-hint--self' : 'radial-hint'
+              }
+            >
+              {focused.hint}
+            </span>
           </>
         ) : (
           <span className="radial-hint">Esc to close</span>

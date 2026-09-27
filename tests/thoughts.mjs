@@ -111,7 +111,7 @@ check('more thoughts means a longer path',
 const steps = runs.slice(1).map((r, i) =>
   (r.dist - runs[i].dist) / (r.thoughts - runs[i].thoughts))
 check('each thought adds a consistent length',
-  steps.every(s => Math.abs(s - 52) < 1.5),
+  steps.every(s => Math.abs(s - 26) < 1.5),
   steps.map(s => s.toFixed(1)).join(', ') + 'px per thought')
 
 await p.keyboard.press('f'); await p.waitForTimeout(550)

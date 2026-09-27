@@ -131,3 +131,26 @@
 .wedge--retry:hover text {
   fill: #0d0f13;
 }
+
+/* Wider hover card for scripted actions, which carry real phrasing. */
+.radial-detail {
+  max-width: 190px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.radial-hint--self {
+  color: var(--accent);
+}
+
+/* An action the assistant can carry out unaided. */
+.wedge--self path {
+  fill: color-mix(in srgb, var(--accent) 14%, rgba(28, 33, 43, 0.97));
+}
+
+.wedge--self:hover path,
+.wedge--self.wedge--active path {
+  fill: var(--accent);
+}

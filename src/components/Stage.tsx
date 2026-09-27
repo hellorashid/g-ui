@@ -7,6 +7,7 @@ import RadialMenu from './RadialMenu'
 import { layout, type Placed } from '../layout'
 import { useGeneration } from '../hooks/useGeneration'
 import { thoughtsFor } from '../thoughts'
+import { DEMO_PROMPTS, DEMOS, demoFor, demoThoughts, type DemoTurn } from '../demo'
 import { THOUGHT_KINDS, type GPath, type GNode, type RadialAction, type UiSettings } from '../types'
 import './Stage.css'
 
@@ -52,8 +53,27 @@ const RETRY: RadialAction = {
   retry: true,
 }
 
+/** Turn a scripted turn's actions into ring wedges. */
+function demoActions(turn: DemoTurn): RadialAction[] {
+  return turn.actions.map((a) => ({
+    id: a.id,
+    label: a.label,
+    icon: a.icon,
+    hint: a.self ? 'I can do this' : 'Needs your input',
+    detail: a.action,
+    self: a.self,
+    next: a.next,
+  }))
+}
+
 /** Action ring for one node, with the inbound wedge swapped for Retry. */
 function actionsFor(node: GNode): RadialAction[] {
+  // A scripted node offers exactly what its turn allows.
+  if (node.turnId && node.demoId) {
+    const turn = DEMOS[node.demoId]?.[node.turnId]
+    const acts = turn ? demoActions(turn) : []
+    return node.origin ? [...acts, RETRY] : acts
+  }
   if (!node.origin) return ACTIONS
   // The inbound direction is the reverse of the bearing we arrived on.
   const back = (node.origin.angle + 180) % 360
@@ -159,6 +179,21 @@ export default function Stage({ settings }: Props) {
   }
 
   const handleSelect = (parent: GNode, action: RadialAction, angle: number) => {
+    // A scripted action advances the conversation to its next turn.
+    if (action.next && parent.demoId) {
+      const turn = DEMOS[parent.demoId]?.[action.next]
+      if (turn) {
+        spawnTurn(parent, turn, angle, action.id, action.label, parent.demoId)
+        setLog(`${action.label} → ${turn.label}`)
+        return
+      }
+    }
+    // An action with no follow-on is a scripted dead end.
+    if (parent.turnId) {
+      setLog(`${action.label} — nothing scripted past here`)
+      return
+    }
+
     // Only the bearing is stored; layout() turns it into a position.
     const spec = SPAWN[action.id] ?? SPAWN.connect
     const id = `n${++seq.current}`
@@ -230,12 +265,69 @@ export default function Stage({ settings }: Props) {
    * Run an input node's prompt: spawn the first output below it and
    * start generating the path that leads there.
    */
+  /**
+   * Spawn a scripted turn off `parent` along `angle`, and start
+   * generating the path that leads to it.
+   */
+  const spawnTurn = (
+    parent: GNode,
+    turn: DemoTurn,
+    angle: number,
+    actionId: string,
+    label: string,
+    demoId: string,
+  ) => {
+    const id = `n${++seq.current}`
+    const pathId = `e${id}`
+
+    setNodes((prev) => [
+      ...prev,
+      {
+        id,
+        label: turn.label,
+        value: turn.value,
+        kind: turn.kind,
+        detail: turn.response,
+        fields: turn.fields ?? [],
+        origin: { parentId: parent.id, actionId, angle },
+        status: 'thinking',
+        turnId: turn.id,
+        demoId,
+      },
+    ])
+    setPaths((prev) => [
+      ...prev,
+      {
+        id: pathId,
+        from: parent.id,
+        to: id,
+        label,
+        actionId,
+        angle,
+        thoughts: [],
+        status: 'pending',
+      },
+    ])
+    generate(pathId, id, demoThoughts(turn, pathId))
+    setBrowsingId(id)
+    return id
+  }
+
   const runInput = (node: Placed) => {
     if (!node.value.trim()) return
     // One output per input; re-running reveals the existing one.
     const already = paths.find((p) => p.from === node.id)
     if (already) {
       setBrowsingId(already.to)
+      return
+    }
+
+    // A recognised prompt plays the scripted conversation instead.
+    const key = node.value.trim().toLowerCase()
+    const script = demoFor(node.value)
+    if (script) {
+      spawnTurn(node, script.start, 180, 'start', 'Start', key)
+      setLog(`Run → ${node.value.trim()}`)
       return
     }
 
@@ -280,13 +372,13 @@ export default function Stage({ settings }: Props) {
    * Outputs grow downward, so new inputs go to the right — otherwise
    * a new prompt would land on top of an existing node's output.
    */
-  const addInput = () => {
+  const addInput = (prompt = '') => {
     const id = `n${++seq.current}`
     const right = placed.length
       ? Math.max(...placed.map((n) => n.x)) + menuRadius + settings.nodeRadius + 180
       : 0
     const top = placed.length ? Math.min(...placed.map((n) => n.y)) : 0
-    setNodes((prev) => [...prev, makeInput(id, right, top)])
+    setNodes((prev) => [...prev, { ...makeInput(id, right, top), value: prompt }])
     setBrowsingId(null)
     focusNode({ ...makeInput(id, right, top), x: right, y: top })
     setLog('New input')
@@ -410,13 +502,31 @@ export default function Stage({ settings }: Props) {
       </div>
 
       {placed.length === 0 && (
-        <button className="stage-empty" onClick={addInput}>
-          <span className="stage-empty-mark">+</span>
-          <span className="stage-empty-text">Start with an input</span>
-        </button>
+        <div className="stage-empty">
+          <button className="stage-empty-start" onClick={() => addInput()}>
+            <span className="stage-empty-mark">+</span>
+            <span className="stage-empty-text">Start with an input</span>
+          </button>
+          <div className="stage-empty-hints">
+            <span className="stage-empty-try">Try</span>
+            {DEMO_PROMPTS.map((prompt) => (
+              <button
+                key={prompt}
+                className="stage-empty-demo"
+                onClick={() => addInput(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
-      <button className="stage-add" onClick={addInput} title="New input node">
+      <button
+        className="stage-add"
+        onClick={() => addInput()}
+        title="New input node"
+      >
         +
       </button>
 

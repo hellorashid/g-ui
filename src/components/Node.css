@@ -206,3 +206,14 @@
   color: var(--muted);
   cursor: default;
 }
+
+/* The assistant's reply, when a node carries one. */
+.node-detail {
+  margin-top: 6px;
+  max-height: 84px;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--muted);
+}

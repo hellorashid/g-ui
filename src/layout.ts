@@ -19,7 +19,7 @@ interface Metrics {
  * PER_THOUGHT, floored so a short chain still clears the rings.
  */
 const BASE_THOUGHTS = 3
-const PER_THOUGHT = 52
+const PER_THOUGHT = 26
 const MIN_GAP = 90
 
 /** Gap for a path with `count` thoughts. */

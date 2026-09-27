@@ -11,7 +11,7 @@ const defaultSettings: UiSettings = {
   accent: '#6e8bff',
   nodeRadius: 100,
   menuRadius: 180,
-  spawnGap: 320,
+  spawnGap: 180,
 }
 
 export default function App() {

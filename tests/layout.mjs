@@ -51,7 +51,7 @@ await p.locator('.node-slot--menu').first().locator('.wedge:not(.wedge--retry)')
 await waitSettled()
 
 // Layout constants, mirrored from src/layout.ts.
-const NODE_R = 100, MENU_R = 180, BASE = 3, PER = 52
+const NODE_R = 100, MENU_R = 180, BASE = 3, PER = 26
 // The path just created, and the span it should produce.
 const thoughts = await p.locator('.gpath').last().locator('.thought').count()
 

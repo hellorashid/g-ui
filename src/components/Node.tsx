@@ -115,6 +115,10 @@ export default function Node({
             <span className="node-value">{node.value}</span>
             <span className="node-kind">{node.kind}</span>
 
+            {node.detail && (
+              <span className="node-detail">{node.detail}</span>
+            )}
+
             {roomy && node.fields.length > 0 && (
               <span className="node-fields">
                 {node.fields.map((f) => (

@@ -63,6 +63,12 @@ export interface GNode {
   status?: NodeStatus
   /** Defaults to 'derived'. */
   nodeKind?: NodeKind
+  /** Turn this node represents when a scripted demo is running. */
+  turnId?: string
+  /** Which script that turn belongs to. */
+  demoId?: string
+  /** Longer body text, shown inside the node when there is room. */
+  detail?: string
   /**
    * Where a root node sits. Derived nodes get their position from the
    * origin chain instead, so this is only set on roots.
@@ -127,4 +133,10 @@ export interface RadialAction {
   hint: string
   /** Re-runs the action that produced this node instead of spawning. */
   retry?: boolean
+  /** Longer description, shown on hover. */
+  detail?: string
+  /** True when the assistant can carry this out unaided. */
+  self?: boolean
+  /** Demo turn this action leads to. */
+  next?: string
 }
