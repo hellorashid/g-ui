@@ -114,22 +114,46 @@
   border-color: var(--accent);
 }
 
-/* Provisional: the path that produces this node is still generating. */
-.node--pending {
+/* Still being reasoned toward: a small placeholder, not yet pressable. */
+.node--thinking {
   border-style: dashed;
-  opacity: 0.72;
+  background: rgba(28, 33, 43, 0.6);
+  cursor: default;
+  transition:
+    width 240ms ease,
+    height 240ms ease;
 }
 
-.node--pending .node-value {
-  animation: node-settling 1400ms ease-in-out infinite;
+.node--thinking:hover {
+  border-color: var(--border);
 }
 
-@keyframes node-settling {
-  0%,
-  100% {
-    opacity: 1;
+.node-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-top-color: var(--accent);
+  animation: node-spin 760ms linear infinite;
+}
+
+@keyframes node-spin {
+  to {
+    transform: rotate(360deg);
   }
-  50% {
-    opacity: 0.45;
-  }
+}
+
+/* Settled, now working out which actions it can offer. */
+.node--generating {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.node--generating::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: node-spin 2600ms linear infinite;
+  pointer-events: none;
 }

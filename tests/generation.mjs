@@ -30,7 +30,7 @@ await p.waitForTimeout(150)
 check('path exists immediately', (await p.locator('.gpath').count()) === 1)
 check('no thoughts yet', (await dots()) === 0, `${await dots()} dots`)
 check('path is marked pending', (await pending()) === 1)
-check('target node is provisional', (await p.locator('.node--pending').count()) === 1)
+check('target node is thinking', (await p.locator('.node--thinking').count()) === 1)
 
 console.log('\nthoughts land one at a time')
 const timeline = []
@@ -56,7 +56,7 @@ const settledOk = await waitSettled()
 check('path settles within its budget', settledOk)
 check('all 6 thoughts present', (await dots()) === 6, `${await dots()}`)
 check('path no longer pending', (await pending()) === 0)
-check('node settled', (await p.locator('.node--pending').count()) === 0)
+check('node no longer thinking', (await p.locator('.node--thinking').count()) === 0)
 
 console.log('\nthe path grows as thoughts arrive')
 await p.keyboard.press('Escape'); await p.waitForTimeout(200)

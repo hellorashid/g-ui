@@ -6,6 +6,18 @@ const p = await b.newPage({ viewport: { width: 1500, height: 950 } })
 const fails = []
 const check = (n, c, x='') => { console.log(`${c?'  ok  ':' FAIL '} ${n}${x?' — '+x:''}`); if(!c) fails.push(n) }
 const nodes = () => p.locator('.node').count()
+
+// A spawned node has no ring until its path settles and it goes idle.
+const waitSettled = async (timeout = 25000) => {
+  const until = Date.now() + timeout
+  while (Date.now() < until) {
+    const busy = await p.evaluate(() =>
+      document.querySelectorAll('.gpath--pending, .node--thinking, .node--generating').length)
+    if (busy === 0) return true
+    await p.waitForTimeout(200)
+  }
+  return false
+}
 const positions = () => p.evaluate(() =>
   [...document.querySelectorAll('.node-slot--node')].map(s => {
     const m = new DOMMatrix(getComputedStyle(s).transform)
@@ -17,7 +29,7 @@ await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
 console.log('\nthe inbound wedge becomes Retry')
 await p.locator('.node').first().click(); await p.waitForTimeout(250)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(0).click()  // up
-await p.waitForTimeout(350)
+await waitSettled()
 check('child spawned', (await nodes()) === 2)
 
 const retryCount = await p.locator('.node-slot--menu').nth(1).locator('.wedge--retry').count()
@@ -33,7 +45,7 @@ check('retry sits on the inbound bearing', retryIdx === 3, `index ${retryIdx}`)
 console.log('\nretry does not spawn a node')
 const before = await nodes()
 await p.locator('.node-slot--menu').nth(1).locator('.wedge--retry').click()
-await p.waitForTimeout(350)
+await p.waitForTimeout(400)
 const after = await nodes()
 check('no new node created', after === before, `${before} -> ${after}`)
 
@@ -72,7 +84,7 @@ await p.locator('.node').first().click(); await p.waitForTimeout(250)
 // spawn in each of the 6 directions from the root, check each child's retry index
 for (const i of [1,2,4,5]) {
   await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(i).click()
-  await p.waitForTimeout(300)
+  await waitSettled()
 }
 const idxs = await p.evaluate(() => {
   const rings=[...document.querySelectorAll('.node-slot--menu')]

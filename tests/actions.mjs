@@ -9,12 +9,25 @@ const check = (name, cond, extra = '') => {
   if (!cond) fails.push(name)
 }
 const rings = () => p.locator('.radial').count()
+
+// A spawned node has no actions until its path settles and it reaches
+// idle, so wait for generation before counting rings.
+const waitSettled = async (timeout = 25000) => {
+  const until = Date.now() + timeout
+  while (Date.now() < until) {
+    const busy = await p.evaluate(() =>
+      document.querySelectorAll('.gpath--pending, .node--thinking, .node--generating').length)
+    if (busy === 0) return true
+    await p.waitForTimeout(200)
+  }
+  return false
+}
 const nodes = () => p.locator('.node').count()
 // Click a wedge belonging to the ring of node index `n`.
 const wedge = async (n, i) => {
   const ring = p.locator('.node-slot--menu').nth(n)
   await ring.locator('.wedge').nth(i).click()
-  await p.waitForTimeout(350)
+  await waitSettled()
 }
 
 await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
@@ -27,7 +40,7 @@ check('click opens a ring', (await rings()) === 1, `${await rings()} rings`)
 console.log('\nrule 2: selecting an action opens its connected node')
 await wedge(0, 1)
 check('spawned a node', (await nodes()) === 2, `${await nodes()} nodes`)
-check('parent + child rings open', (await rings()) === 2, `${await rings()} rings`)
+check('child ring opens once it settles', (await rings()) === 2, `${await rings()} rings`)
 
 console.log('\nrule 3: selected items stay open; others hide')
 // Open a third node from the child, then click a plain node.

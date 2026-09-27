@@ -8,6 +8,17 @@ const check = (name, cond, extra = '') => {
   console.log(`${cond ? '  ok  ' : ' FAIL '} ${name}${extra ? ' — ' + extra : ''}`)
   if (!cond) fails.push(name)
 }
+// Paths generate progressively; the graph keeps re-flowing until
+// every chain has landed, so settle before measuring positions.
+const waitSettled = async (timeout = 25000) => {
+  const until = Date.now() + timeout
+  while (Date.now() < until) {
+    if ((await p.locator('.gpath--pending').count()) === 0) return true
+    await p.waitForTimeout(250)
+  }
+  return false
+}
+
 const vp = () => p.evaluate(() => {
   const el = document.querySelector('.stage-surface')
   const m = new DOMMatrix(getComputedStyle(el).transform)
@@ -73,9 +84,9 @@ await p.click('.node'); await p.waitForSelector('.wedge')
 // Pick distinct actions: re-picking a used one reveals its node
 // instead of spawning a second.
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(1).click()
-await p.waitForTimeout(300)
+await waitSettled()
 await p.locator('.node-slot--menu').nth(1).locator('.wedge').nth(2).click()
-await p.waitForTimeout(300)
+await waitSettled()
 const n = await p.locator('.node').count()
 check('graph grew', n === 3, `${n} nodes`)
 
@@ -93,6 +104,7 @@ check('F fits all nodes on screen', vis.nodes, `zoom ${fit.zoom}, ${vis.offNodes
 check('F fits open rings too', vis.rings, `${vis.offRings} rings off-screen`)
 
 console.log('\nfocus')
+await waitSettled()
 await p.locator('.node').nth(2).dblclick(); await p.waitForTimeout(500)
 const c = await nodeCentre(2)
 const frame = await p.evaluate(() => { const r=document.querySelector('.stage').getBoundingClientRect()

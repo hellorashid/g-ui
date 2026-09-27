@@ -1,5 +1,5 @@
 import type { Placed } from '../layout'
-import { THOUGHT_KINDS, type GPath, type Thought } from '../types'
+import { THINKING_RADIUS, THOUGHT_KINDS, type GPath, type Thought } from '../types'
 import './PathLayer.css'
 
 interface Props {
@@ -68,9 +68,15 @@ export default function PathLayer({
           // child's retry wedge — the one facing back this way — so the
           // link joins action to action rather than action to circle.
           const start = (live ? menuRadius : radius) + 4
+          // A thinking node is a small placeholder, so trim to its
+          // actual size or the path stops short of it.
+          const targetRadius = b.status === 'thinking' ? THINKING_RADIUS : radius
           // Land just inside the ring's outer rim so the cap sits on
           // the wedge itself rather than floating off its rim.
-          const end = openIds.has(gpath.to) ? menuRadius - 10 : radius + 4
+          const end =
+            openIds.has(gpath.to) && b.status !== 'thinking'
+              ? menuRadius - 10
+              : targetRadius + 4
           const x1 = a.x + ux * start
           const y1 = a.y + uy * start
           const x2 = b.x - ux * end

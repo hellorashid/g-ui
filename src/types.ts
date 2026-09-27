@@ -11,8 +11,18 @@ export interface UiSettings {
   spawnGap: number
 }
 
-/** A node is provisional until the path that produces it settles. */
-export type NodeStatus = 'pending' | 'settled'
+/**
+ * A node's lifecycle:
+ *  - thinking:   the path that produces it is still reasoning. The
+ *                node is a small placeholder with no actions.
+ *  - generating: the path has settled and the node is working out
+ *                which actions it can offer.
+ *  - idle:       settled, with its action ring available.
+ */
+export type NodeStatus = 'thinking' | 'generating' | 'idle'
+
+/** Radius of a node that is still being reasoned toward. */
+export const THINKING_RADIUS = 26
 
 /**
  * A data input/output on the canvas.

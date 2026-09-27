@@ -5,7 +5,12 @@ import type { GNode, GPath, Thought } from '../types'
 const MIN_DELAY = 1000
 const MAX_DELAY = 3000
 
+/** How long a settled node spends working out its actions. */
+const MIN_ACTIONS = 600
+const MAX_ACTIONS = 1400
+
 const delay = () => MIN_DELAY + Math.random() * (MAX_DELAY - MIN_DELAY)
+const actionDelay = () => MIN_ACTIONS + Math.random() * (MAX_ACTIONS - MIN_ACTIONS)
 
 interface Options {
   setPaths: React.Dispatch<React.SetStateAction<GPath[]>>
@@ -49,12 +54,24 @@ export function useGeneration({ setPaths, setNodes, onSettled }: Options) {
         )
 
         if (i + 1 >= chain.length) {
-          timers.current.delete(pathId)
-          // The chain is complete: the node is no longer provisional.
+          // The chain is complete. The node stops thinking and starts
+          // working out which actions it can offer.
           setNodes((prev) =>
-            prev.map((n) => (n.id === nodeId ? { ...n, status: 'settled' } : n)),
+            prev.map((n) =>
+              n.id === nodeId ? { ...n, status: 'generating' } : n,
+            ),
           )
           onSettled?.(pathId)
+
+          timers.current.set(
+            pathId,
+            setTimeout(() => {
+              timers.current.delete(pathId)
+              setNodes((prev) =>
+                prev.map((n) => (n.id === nodeId ? { ...n, status: 'idle' } : n)),
+              )
+            }, actionDelay()),
+          )
           return
         }
 

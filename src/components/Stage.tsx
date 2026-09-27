@@ -33,6 +33,9 @@ const SPAWN: Record<string, { label: string; kind: string; value: string }> = {
   output: { label: 'output', kind: 'sink', value: '→' },
 }
 
+/** A node offers actions only once it has settled. */
+const isIdle = (n: GNode) => (n.status ?? 'idle') === 'idle'
+
 /** Thinnest the action ring may get before wedges stop being clickable. */
 const MIN_BAND = 56
 
@@ -170,7 +173,7 @@ export default function Stage({ settings }: Props) {
         { key: 'via', value: action.label.toLowerCase() },
       ],
       origin: { parentId: parent.id, actionId: action.id, angle },
-      status: 'pending',
+      status: 'thinking',
     }
 
     // The path starts empty and fills in: thoughts arrive one by one
@@ -193,8 +196,9 @@ export default function Stage({ settings }: Props) {
       },
     ])
     generate(pathId, id, chain)
-    // The parent's ring is now anchoring a link, so pin it; the new
-    // node's own ring opens so the chain can be continued immediately.
+    // The parent's ring is now anchoring a link, so pin it. The child
+    // is marked as browsing too, but its ring stays hidden until the
+    // node reaches idle — see isIdle in the render.
     setPinnedIds((prev) => new Set(prev).add(parent.id))
     setBrowsingId(id)
     setLog(`${action.label} → ${child.label}`)
@@ -275,9 +279,10 @@ export default function Stage({ settings }: Props) {
           </div>
         )}
 
-        {/* Rings: beneath the link layer. */}
+        {/* Rings: beneath the link layer. Only an idle node has
+            actions — one still being reasoned toward has none yet. */}
         {placed
-          .filter((node) => openIds.has(node.id))
+          .filter((node) => openIds.has(node.id) && isIdle(node))
           .map((node) => (
             <div
               className="node-slot node-slot--menu"
@@ -315,7 +320,7 @@ export default function Stage({ settings }: Props) {
             <Node
               node={node}
               radius={settings.nodeRadius}
-              open={openIds.has(node.id)}
+              open={openIds.has(node.id) && isIdle(node)}
               onPress={() => pressNode(node.id)}
               onFocus={() => focusNode(node)}
             />
