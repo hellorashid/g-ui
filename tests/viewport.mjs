@@ -70,9 +70,12 @@ check('0 resets view', reset.zoom === 1 && Math.abs(reset.x) < 1 && Math.abs(res
 
 // build a graph that extends well past the viewport, then fit
 await p.click('.node'); await p.waitForSelector('.wedge')
-await p.locator('.wedge').nth(1).click(); await p.waitForTimeout(250)
-await p.locator('.node').nth(1).click(); await p.waitForTimeout(250)
-await p.locator('.wedge').nth(1).click(); await p.waitForTimeout(250)
+// Pick distinct actions: re-picking a used one reveals its node
+// instead of spawning a second.
+await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(1).click()
+await p.waitForTimeout(300)
+await p.locator('.node-slot--menu').nth(1).locator('.wedge').nth(2).click()
+await p.waitForTimeout(300)
 const n = await p.locator('.node').count()
 check('graph grew', n === 3, `${n} nodes`)
 

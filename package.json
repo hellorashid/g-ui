@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:viewport": "node tests/viewport.mjs"
+    "test:viewport": "node tests/viewport.mjs",
+    "test:actions": "node tests/actions.mjs",
+    "test": "node tests/viewport.mjs && node tests/actions.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

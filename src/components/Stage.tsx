@@ -54,8 +54,16 @@ const ROOT: GNode = {
 export default function Stage({ settings }: Props) {
   const [nodes, setNodes] = useState<GNode[]>([ROOT])
   const [edges, setEdges] = useState<GEdge[]>([])
-  /** Every node whose radial menu is open; rings persist as you branch. */
-  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
+  /**
+   * Rings come in two flavours:
+   *  - pinned: a node whose ring has a selected action, or which was
+   *    reached by selecting one. These survive clicks elsewhere.
+   *  - browsing: opened by a plain click, closed when focus moves on.
+   */
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())
+  const [browsingId, setBrowsingId] = useState<string | null>(null)
+  const openIds = new Set(pinnedIds)
+  if (browsingId) openIds.add(browsingId)
   const [log, setLog] = useState<string | null>(null)
   const seq = useRef(1)
   const frameRef = useRef<HTMLDivElement>(null)
@@ -94,7 +102,10 @@ export default function Stage({ settings }: Props) {
       const t = e.target as HTMLElement
       if (t.tagName === 'INPUT' || t.isContentEditable) return
 
-      if (e.key === 'Escape') setOpenIds(new Set())
+      if (e.key === 'Escape') {
+        setPinnedIds(new Set())
+        setBrowsingId(null)
+      }
       else if (e.key === 'f' || e.key === 'F') fitAll()
       else if (e.key === '0') resetView()
     }
@@ -102,12 +113,14 @@ export default function Stage({ settings }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [fitAll, resetView])
 
-  const toggle = (id: string) =>
-    setOpenIds((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+  /**
+   * Clicking a node opens its ring and drops whichever ring was merely
+   * being browsed. Rings pinned by a selected action always survive —
+   * they anchor a link, so hiding one would orphan its connector.
+   */
+  const pressNode = (id: string) => {
+    setBrowsingId((prev) => (prev === id ? null : id))
+  }
 
   const handleSelect = (parent: GNode, action: RadialAction, angle: number) => {
     // Place the child out along the chosen wedge's bearing.
@@ -141,8 +154,24 @@ export default function Stage({ settings }: Props) {
         angle,
       },
     ])
-    setOpenIds((prev) => new Set(prev).add(parent.id))
+    // The parent's ring is now anchoring a link, so pin it; the new
+    // node's own ring opens so the chain can be continued immediately.
+    setPinnedIds((prev) => new Set(prev).add(parent.id))
+    setBrowsingId(id)
     setLog(`${action.label} → ${child.label}`)
+  }
+
+  /** Selecting an action that already spawned a node re-opens that node. */
+  const handleReselect = (parent: GNode, action: RadialAction) => {
+    const existing = edges.find(
+      (e) => e.from === parent.id && e.actionId === action.id,
+    )
+    if (!existing) return false
+    setBrowsingId(existing.to)
+    const target = nodes.find((n) => n.id === existing.to)
+    if (target) focusNode(target)
+    setLog(`${action.label} → ${target?.label ?? existing.to}`)
+    return true
   }
 
   return (
@@ -186,8 +215,14 @@ export default function Stage({ settings }: Props) {
                 actions={ACTIONS}
                 radius={menuRadius}
                 innerRadius={holeRadius}
-                onSelect={(action, angle) => handleSelect(node, action, angle)}
-                onDismiss={() => toggle(node.id)}
+                onSelect={(action, angle) => {
+                  // Re-picking a used action reveals its node instead
+                  // of spawning a duplicate.
+                  if (!handleReselect(node, action)) {
+                    handleSelect(node, action, angle)
+                  }
+                }}
+                onDismiss={() => pressNode(node.id)}
                 selectedIds={edges
                   .filter((e) => e.from === node.id)
                   .map((e) => e.actionId)}
@@ -206,7 +241,7 @@ export default function Stage({ settings }: Props) {
               node={node}
               radius={settings.nodeRadius}
               open={openIds.has(node.id)}
-              onPress={() => toggle(node.id)}
+              onPress={() => pressNode(node.id)}
               onFocus={() => focusNode(node)}
             />
           </div>
