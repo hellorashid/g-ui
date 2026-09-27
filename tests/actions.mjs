@@ -30,7 +30,7 @@ const wedge = async (n, i) => {
   await waitSettled()
 }
 
-await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
+await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
 
 console.log('\nrule 1: clicking a node opens its radial menu')
 check('no rings initially', (await rings()) === 0)

@@ -9,11 +9,11 @@ const count = (sel) => p.locator(sel).count()
 
 const waitFor = async (fn, timeout = 25000) => {
   const until = Date.now() + timeout
-  while (Date.now() < until) { if (await fn()) return true; await p.waitForTimeout(150) }
+  while (Date.now() < until) { if (await fn()) return true; await p.waitForTimeout(40) }
   return false
 }
 
-await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
+await p.goto('http://localhost:5173/?speed=4', { waitUntil: 'networkidle' })
 await p.locator('.node').first().click(); await p.waitForTimeout(250)
 
 console.log('\nthinking: small placeholder, no actions')

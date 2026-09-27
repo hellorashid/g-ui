@@ -33,7 +33,7 @@ const setSlider = async (label, v) => {
   return (await field.locator('.field-value').textContent()).trim()
 }
 
-await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
+await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
 await p.locator('.node').first().click(); await p.waitForTimeout(250)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(0).click()  // Connect, straight up
 await waitSettled()

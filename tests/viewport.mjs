@@ -29,7 +29,7 @@ const nodeCentre = (i = 0) => p.evaluate((i) => {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
 }, i)
 
-await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
+await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
 
 console.log('\nzoom')
 const before = await vp()

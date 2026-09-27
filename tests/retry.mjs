@@ -24,7 +24,7 @@ const positions = () => p.evaluate(() =>
     return { label: s.querySelector('.node-label').textContent, x: Math.round(m.e), y: Math.round(m.f) }
   }))
 
-await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
+await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
 
 console.log('\nthe inbound wedge becomes Retry')
 await p.locator('.node').first().click(); await p.waitForTimeout(250)

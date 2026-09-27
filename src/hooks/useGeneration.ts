@@ -9,8 +9,20 @@ const MAX_DELAY = 3000
 const MIN_ACTIONS = 600
 const MAX_ACTIONS = 1400
 
-const delay = () => MIN_DELAY + Math.random() * (MAX_DELAY - MIN_DELAY)
-const actionDelay = () => MIN_ACTIONS + Math.random() * (MAX_ACTIONS - MIN_ACTIONS)
+/**
+ * Scales every generation delay. Tests pass ?speed=20 so a chain that
+ * takes seconds in the app settles in milliseconds; the app itself
+ * always runs at 1.
+ */
+const speed = () => {
+  if (typeof window === 'undefined') return 1
+  const raw = Number(new URLSearchParams(window.location.search).get('speed'))
+  return Number.isFinite(raw) && raw > 0 ? raw : 1
+}
+
+const delay = () => (MIN_DELAY + Math.random() * (MAX_DELAY - MIN_DELAY)) / speed()
+const actionDelay = () =>
+  (MIN_ACTIONS + Math.random() * (MAX_ACTIONS - MIN_ACTIONS)) / speed()
 
 interface Options {
   setPaths: React.Dispatch<React.SetStateAction<GPath[]>>

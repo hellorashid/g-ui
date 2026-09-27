@@ -20,7 +20,7 @@ const waitSettled = async (timeout = 25000) => {
   return false
 }
 
-await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
+await p.goto('http://localhost:5173/?speed=6', { waitUntil: 'networkidle' })
 await p.locator('.node').first().click(); await p.waitForTimeout(250)
 
 console.log('\na path starts empty and pending')
@@ -48,8 +48,11 @@ check('landed one at a time', timeline.every((t,i) => i === 0 || t.n === timelin
   timeline.map(t => t.n).join(','))
 
 const gaps = timeline.slice(1).map((t,i) => t.at - timeline[i].at)
-const inRange = gaps.every(g => g >= 800 && g <= 3600)
-check('gaps fall in the 1-3s window', inRange, gaps.map(g => (g/1000).toFixed(1)+'s').join(' '))
+// Running at speed=6, so the 1-3s window becomes ~167-500ms. Allow
+// slack for sampling resolution at either end.
+const inRange = gaps.every(g => g >= 100 && g <= 900)
+check('gaps fall in the scaled 1-3s window', inRange,
+  gaps.map(g => g + 'ms').join(' ') + ' (expect ~167-500ms at 6x)')
 
 console.log('\nthe path settles when the chain completes')
 const settledOk = await waitSettled()

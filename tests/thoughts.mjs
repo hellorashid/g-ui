@@ -16,7 +16,7 @@ const waitSettled = async (timeout = 25000) => {
   return false
 }
 
-await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
+await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
 await p.locator('.node').first().click(); await p.waitForTimeout(250)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(1).click()  // Inspect
 await waitSettled()
