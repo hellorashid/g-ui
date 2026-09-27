@@ -11,11 +11,16 @@ export interface UiSettings {
   spawnGap: number
 }
 
-/** A data input/output on the canvas. */
+/**
+ * A data input/output on the canvas.
+ *
+ * Position is derived, not stored: a node's place is its parent's
+ * place plus one reach along `origin.angle`. Keeping the graph in
+ * polar terms means layout settings (spawn gap, radii) re-flow every
+ * node the moment they change.
+ */
 export interface GNode {
   id: string
-  x: number
-  y: number
   label: string
   /** Whatever this node currently holds; rendered inside the circle. */
   value: string

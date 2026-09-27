@@ -10,8 +10,9 @@
     "preview": "vite preview",
     "test:viewport": "node tests/viewport.mjs",
     "test:actions": "node tests/actions.mjs",
-    "test": "node tests/viewport.mjs && node tests/actions.mjs && node tests/retry.mjs",
-    "test:retry": "node tests/retry.mjs"
+    "test": "node tests/viewport.mjs && node tests/actions.mjs && node tests/retry.mjs && node tests/layout.mjs",
+    "test:retry": "node tests/retry.mjs",
+    "test:layout": "node tests/layout.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

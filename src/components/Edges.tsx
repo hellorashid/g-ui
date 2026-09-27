@@ -1,8 +1,9 @@
-import type { GEdge, GNode } from '../types'
+import type { Placed } from '../layout'
+import type { GEdge } from '../types'
 import './Edges.css'
 
 interface Props {
-  nodes: GNode[]
+  nodes: Placed[]
   edges: GEdge[]
   radius: number
   /** Nodes whose radial menus are open. */
@@ -53,11 +54,17 @@ export default function Edges({
           const ux = Math.cos(rad)
           const uy = Math.sin(rad)
 
+          // Leave the parent at its selected wedge, and arrive on the
+          // child's retry wedge — the one facing back this way — so the
+          // link joins action to action rather than action to circle.
           const start = (live ? menuRadius : radius) + 4
+          // Land just inside the ring's outer rim so the cap sits on
+          // the wedge itself rather than floating off its edge.
+          const end = openIds.has(edge.to) ? menuRadius - 10 : radius + 4
           const x1 = a.x + ux * start
           const y1 = a.y + uy * start
-          const x2 = b.x - ux * (radius + 4)
-          const y2 = b.y - uy * (radius + 4)
+          const x2 = b.x - ux * end
+          const y2 = b.y - uy * end
 
           return (
             <g className={live ? 'edge edge--live' : 'edge'} key={edge.id}>

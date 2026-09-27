@@ -4,6 +4,7 @@ import { useViewportActions } from '../hooks/useViewportActions'
 import Edges from './Edges'
 import Node from './Node'
 import RadialMenu from './RadialMenu'
+import { layout } from '../layout'
 import type { GEdge, GNode, RadialAction, UiSettings } from '../types'
 import './Stage.css'
 
@@ -58,8 +59,6 @@ function actionsFor(node: GNode): RadialAction[] {
 
 const ROOT: GNode = {
   id: 'n1',
-  x: 0,
-  y: 0,
   label: 'input',
   value: '42',
   kind: 'number',
@@ -97,10 +96,16 @@ export default function Stage({ settings }: Props) {
   const holeRadius = settings.nodeRadius + 14
   const menuRadius = Math.max(settings.menuRadius, holeRadius + MIN_BAND)
 
+  const placed = layout(nodes, {
+    nodeRadius: settings.nodeRadius,
+    menuRadius,
+    spawnGap: settings.spawnGap,
+  })
+
   const { viewport, animateTo, panning } = useViewport({ ref: frameRef })
   const { fitAll, resetView, focusNode } = useViewportActions({
     ref: frameRef,
-    nodes,
+    nodes: placed,
     nodeRadius: settings.nodeRadius,
     menuRadius,
     openIds,
@@ -146,16 +151,12 @@ export default function Stage({ settings }: Props) {
   }
 
   const handleSelect = (parent: GNode, action: RadialAction, angle: number) => {
-    // Place the child out along the chosen wedge's bearing.
-    const rad = ((angle - 90) * Math.PI) / 180
-    const reach = menuRadius + settings.nodeRadius + settings.spawnGap
+    // Only the bearing is stored; layout() turns it into a position.
     const spec = SPAWN[action.id] ?? SPAWN.connect
     const id = `n${++seq.current}`
 
     const child: GNode = {
       id,
-      x: parent.x + Math.cos(rad) * reach,
-      y: parent.y + Math.sin(rad) * reach,
       label: spec.label,
       value: spec.value,
       kind: spec.kind,
@@ -211,7 +212,7 @@ export default function Stage({ settings }: Props) {
     )
     if (!existing) return false
     setBrowsingId(existing.to)
-    const target = nodes.find((n) => n.id === existing.to)
+    const target = placed.find((n) => n.id === existing.to)
     if (target) focusNode(target)
     setLog(`${action.label} → ${target?.label ?? existing.to}`)
     return true
@@ -236,7 +237,7 @@ export default function Stage({ settings }: Props) {
         }}
       >
         <Edges
-          nodes={nodes}
+          nodes={placed}
           edges={edges}
           radius={settings.nodeRadius}
           openIds={openIds}
@@ -246,7 +247,7 @@ export default function Stage({ settings }: Props) {
         />
 
         {/* Rings: beneath the link layer. */}
-        {nodes
+        {placed
           .filter((node) => openIds.has(node.id))
           .map((node) => (
             <div
@@ -276,7 +277,7 @@ export default function Stage({ settings }: Props) {
           ))}
 
         {/* Nodes: above the link layer. */}
-        {nodes.map((node) => (
+        {placed.map((node) => (
           <div
             className="node-slot node-slot--node"
             key={node.id}

@@ -41,6 +41,20 @@ const pos = await positions()
 const overlap = pos.some((a,i) => pos.some((c,j) => i<j && a.x===c.x && a.y===c.y))
 check('no two nodes share a position', !overlap, JSON.stringify(pos))
 
+console.log('\nthe link lands on the retry wedge')
+const anchored = await p.evaluate(() => {
+  const path = document.querySelector('.edge path')
+  const retry = document.querySelector('.wedge--retry path')
+  if (!path || !retry) return null
+  const end = path.getPointAtLength(path.getTotalLength())
+  const m = path.ownerSVGElement.getScreenCTM()
+  const sx = m.a*end.x + m.c*end.y + m.e, sy = m.b*end.x + m.d*end.y + m.f
+  const ws = retry.ownerSVGElement, wm = ws.getScreenCTM().inverse()
+  const lp = ws.createSVGPoint(); lp.x = wm.a*sx+wm.c*sy+wm.e; lp.y = wm.b*sx+wm.d*sy+wm.f
+  return retry.isPointInFill(lp)
+})
+check('connector ends on the child retry wedge', anchored === true, `${anchored}`)
+
 console.log('\nretry records a run')
 const runs = await p.evaluate(() => {
   const n = document.querySelectorAll('.node-slot--node')[1]

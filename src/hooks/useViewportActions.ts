@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
-import type { GNode } from '../types'
+import type { Placed } from '../layout'
 import { MAX_ZOOM, MIN_ZOOM, type Viewport } from './useViewport'
 
 interface Options {
   ref: React.RefObject<HTMLElement | null>
-  nodes: GNode[]
+  nodes: Placed[]
   nodeRadius: number
   /** Outer radius of an open ring, so fitting clears the menus too. */
   menuRadius: number
@@ -29,7 +29,7 @@ export function useViewportActions({
     const margin = 48
 
     // Each node's extent is its own radius, or its ring's when open.
-    const reach = (n: GNode) =>
+    const reach = (n: Placed) =>
       (openIds.has(n.id) ? menuRadius : nodeRadius) + margin
     const minX = Math.min(...nodes.map((n) => n.x - reach(n)))
     const maxX = Math.max(...nodes.map((n) => n.x + reach(n)))
@@ -48,7 +48,7 @@ export function useViewportActions({
 
   /** Centre one node, keeping the current zoom unless it is very far out. */
   const focusNode = useCallback(
-    (node: GNode, zoom?: number) => {
+    (node: Placed, zoom?: number) => {
       const z = zoom ?? 1
       animateTo({ zoom: z, x: -node.x * z, y: -node.y * z })
     },
