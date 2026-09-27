@@ -41,8 +41,36 @@ export interface GNode {
   }
 }
 
+/**
+ * One step of reasoning along a path. Thoughts are the chain that
+ * produced the path's target node: read end to end, they explain how
+ * the graph got from one node to the next.
+ */
+export interface Thought {
+  id: string
+  type: ThoughtType
+  /** One line, shown on hover. */
+  description: string
+}
+
+export type ThoughtType =
+  | 'observe'
+  | 'retrieve'
+  | 'infer'
+  | 'decide'
+  | 'verify'
+
+/** Icon and label per thought type, used by the dots and tooltips. */
+export const THOUGHT_KINDS: Record<ThoughtType, { icon: string; label: string }> = {
+  observe: { icon: '◎', label: 'Observe' },
+  retrieve: { icon: '⌸', label: 'Retrieve' },
+  infer: { icon: '∴', label: 'Infer' },
+  decide: { icon: '⟐', label: 'Decide' },
+  verify: { icon: '✓', label: 'Verify' },
+}
+
 /** A link between two nodes, drawn as a curve. */
-export interface GEdge {
+export interface GPath {
   id: string
   from: string
   to: string
@@ -52,6 +80,8 @@ export interface GEdge {
   actionId: string
   /** Bearing of the wedge it came from, degrees clockwise from 12 o'clock. */
   angle: number
+  /** The reasoning chain that produced the target node. */
+  thoughts: Thought[]
 }
 
 /** One wedge of a radial menu. */

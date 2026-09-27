@@ -43,7 +43,7 @@ check('no two nodes share a position', !overlap, JSON.stringify(pos))
 
 console.log('\nthe link lands on the retry wedge')
 const anchored = await p.evaluate(() => {
-  const path = document.querySelector('.edge path')
+  const path = document.querySelector('.gpath path')
   const retry = document.querySelector('.wedge--retry path')
   if (!path || !retry) return null
   const end = path.getPointAtLength(path.getTotalLength())

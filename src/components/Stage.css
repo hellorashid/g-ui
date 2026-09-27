@@ -32,9 +32,9 @@
  */
 /*
  * `transform` makes each slot its own stacking context, so a child's
- * z-index can never be compared against the edge layer. Rings and
+ * z-index can never be compared against the gpath layer. Rings and
  * nodes therefore live in separate slot layers, ranked here:
- * links (1, .edges) -> rings (2) -> nodes (3).
+ * links (1, .paths) -> rings (2) -> nodes (3).
  */
 .node-slot {
   position: absolute;
@@ -103,4 +103,38 @@
   font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* Hover card for a thought; positioned in the surface's space. */
+.thought-tip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: max-content;
+  max-width: 260px;
+  margin: 16px 0 0 16px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(13, 15, 19, 0.96);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.thought-tip-kind {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.thought-tip-text {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text);
 }

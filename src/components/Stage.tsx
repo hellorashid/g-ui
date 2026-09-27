@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useViewport } from '../hooks/useViewport'
 import { useViewportActions } from '../hooks/useViewportActions'
-import Edges from './Edges'
+import PathLayer, { type HoveredThought } from './PathLayer'
 import Node from './Node'
 import RadialMenu from './RadialMenu'
 import { layout } from '../layout'
-import type { GEdge, GNode, RadialAction, UiSettings } from '../types'
+import { thoughtsFor } from '../thoughts'
+import { THOUGHT_KINDS, type GPath, type GNode, type RadialAction, type UiSettings } from '../types'
 import './Stage.css'
 
 interface Props {
@@ -71,11 +72,11 @@ const ROOT: GNode = {
 
 /**
  * The main desktop: where the visual interface gets rendered.
- * No chrome — the surface runs edge to edge.
+ * No chrome — the surface runs gpath to gpath.
  */
 export default function Stage({ settings }: Props) {
   const [nodes, setNodes] = useState<GNode[]>([ROOT])
-  const [edges, setEdges] = useState<GEdge[]>([])
+  const [paths, setEdges] = useState<GPath[]>([])
   /**
    * Rings come in two flavours:
    *  - pinned: a node whose ring has a selected action, or which was
@@ -87,6 +88,7 @@ export default function Stage({ settings }: Props) {
   const openIds = new Set(pinnedIds)
   if (browsingId) openIds.add(browsingId)
   const [log, setLog] = useState<string | null>(null)
+  const [hovered, setHovered] = useState<HoveredThought | null>(null)
   const seq = useRef(1)
   const frameRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<HTMLDivElement>(null)
@@ -112,7 +114,7 @@ export default function Stage({ settings }: Props) {
     animateTo,
   })
 
-  // The edge layer needs pixel dimensions to centre its viewBox.
+  // The gpath layer needs pixel dimensions to centre its viewBox.
   useEffect(() => {
     const el = frameRef.current
     if (!el) return
@@ -177,6 +179,7 @@ export default function Stage({ settings }: Props) {
         label: action.label,
         actionId: action.id,
         angle,
+        thoughts: thoughtsFor(action.id, `e${id}`),
       },
     ])
     // The parent's ring is now anchoring a link, so pin it; the new
@@ -207,7 +210,7 @@ export default function Stage({ settings }: Props) {
 
   /** Selecting an action that already spawned a node re-opens that node. */
   const handleReselect = (parent: GNode, action: RadialAction) => {
-    const existing = edges.find(
+    const existing = paths.find(
       (e) => e.from === parent.id && e.actionId === action.id,
     )
     if (!existing) return false
@@ -236,15 +239,30 @@ export default function Stage({ settings }: Props) {
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
         }}
       >
-        <Edges
+        <PathLayer
           nodes={placed}
-          edges={edges}
+          paths={paths}
           radius={settings.nodeRadius}
           openIds={openIds}
           menuRadius={menuRadius}
           width={size.width}
           height={size.height}
+          onHoverThought={setHovered}
         />
+
+        {/* Tooltip rides in the surface's space so it tracks pan/zoom. */}
+        {hovered && (
+          <div
+            className="thought-tip"
+            style={{ transform: `translate(${hovered.x}px, ${hovered.y}px)` }}
+          >
+            <span className="thought-tip-kind">
+              {THOUGHT_KINDS[hovered.thought.type].icon}{' '}
+              {THOUGHT_KINDS[hovered.thought.type].label}
+            </span>
+            <span className="thought-tip-text">{hovered.thought.description}</span>
+          </div>
+        )}
 
         {/* Rings: beneath the link layer. */}
         {placed
@@ -269,7 +287,7 @@ export default function Stage({ settings }: Props) {
                   }
                 }}
                 onDismiss={() => pressNode(node.id)}
-                selectedIds={edges
+                selectedIds={paths
                   .filter((e) => e.from === node.id)
                   .map((e) => e.actionId)}
               />
