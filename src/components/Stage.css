@@ -1,0 +1,106 @@
+.stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--stage);
+  touch-action: none;
+  cursor: grab;
+}
+
+.stage--panning {
+  cursor: grabbing;
+}
+
+.stage[data-grid] {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+}
+
+.stage-surface {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/*
+ * A zero-size anchor in the surface's centered coordinate space; the
+ * slot's own position IS the node's (x, y). Children are absolutely
+ * positioned and self-center on it, so nothing depends on slot size.
+ */
+/*
+ * `transform` makes each slot its own stacking context, so a child's
+ * z-index can never be compared against the edge layer. Rings and
+ * nodes therefore live in separate slot layers, ranked here:
+ * links (1, .edges) -> rings (2) -> nodes (3).
+ */
+.node-slot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+
+.node-slot--menu {
+  z-index: 2;
+}
+
+.node-slot--node {
+  z-index: 3;
+}
+
+.stage-log {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fixed to the frame, so they don't pan with the canvas. */
+.stage-controls {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(6px);
+}
+
+.stage-controls button {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.stage-controls button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.stage-zoom {
+  min-width: 42px;
+  padding-right: 4px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

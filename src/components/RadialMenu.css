@@ -1,0 +1,113 @@
+.radial {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: radial-in 140ms ease-out;
+}
+
+@keyframes radial-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.88);
+  }
+}
+
+/* Covers the whole stage so a click anywhere dismisses. */
+.radial-scrim {
+  position: fixed;
+  inset: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.radial-svg {
+  position: relative;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.wedge {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.wedge path {
+  fill: rgba(28, 33, 43, 0.97);
+  stroke: var(--border);
+  stroke-width: 1;
+  transition: fill 90ms ease;
+}
+
+.wedge text {
+  fill: var(--muted);
+  font-size: 15px;
+  text-anchor: middle;
+  pointer-events: none;
+  transition: fill 90ms ease;
+}
+
+.wedge:hover path,
+.wedge--active path {
+  fill: var(--accent);
+}
+
+.wedge:hover text,
+.wedge--active text {
+  fill: #0d0f13;
+}
+
+/* Already spawned from — stays lit so the link reads as anchored. */
+.wedge--selected path {
+  fill: color-mix(in srgb, var(--accent) 26%, rgba(28, 33, 43, 0.97));
+  stroke: var(--accent);
+}
+
+.wedge--selected text {
+  fill: var(--text);
+}
+
+.wedge--selected:hover path,
+.wedge--selected.wedge--active path {
+  fill: var(--accent);
+}
+
+.wedge--selected:hover text,
+.wedge--selected.wedge--active text {
+  fill: #0d0f13;
+}
+
+/*
+ * Sits in the ring's hole, below the node circle. Self-centers on the
+ * menu's origin, then drops by the caller-supplied offset.
+ */
+.radial-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, calc(-50% + var(--center-drop)));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  text-align: center;
+  pointer-events: none;
+}
+
+.radial-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.radial-hint {
+  font-size: 10px;
+  color: var(--muted);
+}

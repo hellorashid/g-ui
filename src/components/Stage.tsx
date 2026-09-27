@@ -1,0 +1,229 @@
+import { useEffect, useRef, useState } from 'react'
+import { useViewport } from '../hooks/useViewport'
+import { useViewportActions } from '../hooks/useViewportActions'
+import Edges from './Edges'
+import Node from './Node'
+import RadialMenu from './RadialMenu'
+import type { GEdge, GNode, RadialAction, UiSettings } from '../types'
+import './Stage.css'
+
+interface Props {
+  settings: UiSettings
+}
+
+const ACTIONS: RadialAction[] = [
+  { id: 'connect', label: 'Connect', icon: '⤳', hint: 'Link to a new node' },
+  { id: 'inspect', label: 'Inspect', icon: '◉', hint: 'Read the value' },
+  { id: 'transform', label: 'Transform', icon: 'ƒ', hint: 'Apply a function' },
+  { id: 'duplicate', label: 'Duplicate', icon: '⧉', hint: 'Clone this node' },
+  { id: 'filter', label: 'Filter', icon: '⋔', hint: 'Gate the values' },
+  { id: 'output', label: 'Output', icon: '⇥', hint: 'Send downstream' },
+]
+
+/** What each action produces when it spawns a node. */
+const SPAWN: Record<string, { label: string; kind: string; value: string }> = {
+  connect: { label: 'link', kind: 'ref', value: '—' },
+  inspect: { label: 'inspect', kind: 'view', value: '42' },
+  transform: { label: 'transform', kind: 'fn', value: 'ƒ(x)' },
+  duplicate: { label: 'copy', kind: 'number', value: '42' },
+  filter: { label: 'filter', kind: 'gate', value: '>0' },
+  output: { label: 'output', kind: 'sink', value: '→' },
+}
+
+/** Thinnest the action ring may get before wedges stop being clickable. */
+const MIN_BAND = 56
+
+const ROOT: GNode = {
+  id: 'n1',
+  x: 0,
+  y: 0,
+  label: 'input',
+  value: '42',
+  kind: 'number',
+  fields: [
+    { key: 'source', value: 'sensor.a' },
+    { key: 'updated', value: '2s ago' },
+    { key: 'out', value: '0 links' },
+  ],
+}
+
+/**
+ * The main desktop: where the visual interface gets rendered.
+ * No chrome — the surface runs edge to edge.
+ */
+export default function Stage({ settings }: Props) {
+  const [nodes, setNodes] = useState<GNode[]>([ROOT])
+  const [edges, setEdges] = useState<GEdge[]>([])
+  /** Every node whose radial menu is open; rings persist as you branch. */
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
+  const [log, setLog] = useState<string | null>(null)
+  const seq = useRef(1)
+  const frameRef = useRef<HTMLDivElement>(null)
+  const surfaceRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+
+  // Keep a usable ring even when the node is scaled up past the menu.
+  const holeRadius = settings.nodeRadius + 14
+  const menuRadius = Math.max(settings.menuRadius, holeRadius + MIN_BAND)
+
+  const { viewport, animateTo, panning } = useViewport({ ref: frameRef })
+  const { fitAll, resetView, focusNode } = useViewportActions({
+    ref: frameRef,
+    nodes,
+    nodeRadius: settings.nodeRadius,
+    menuRadius,
+    openIds,
+    animateTo,
+  })
+
+  // The edge layer needs pixel dimensions to centre its viewBox.
+  useEffect(() => {
+    const el = frameRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setSize({ width, height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Ignore while typing in the sidebar.
+      const t = e.target as HTMLElement
+      if (t.tagName === 'INPUT' || t.isContentEditable) return
+
+      if (e.key === 'Escape') setOpenIds(new Set())
+      else if (e.key === 'f' || e.key === 'F') fitAll()
+      else if (e.key === '0') resetView()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fitAll, resetView])
+
+  const toggle = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+
+  const handleSelect = (parent: GNode, action: RadialAction, angle: number) => {
+    // Place the child out along the chosen wedge's bearing.
+    const rad = ((angle - 90) * Math.PI) / 180
+    const reach = menuRadius + settings.nodeRadius + settings.spawnGap
+    const spec = SPAWN[action.id] ?? SPAWN.connect
+    const id = `n${++seq.current}`
+
+    const child: GNode = {
+      id,
+      x: parent.x + Math.cos(rad) * reach,
+      y: parent.y + Math.sin(rad) * reach,
+      label: spec.label,
+      value: spec.value,
+      kind: spec.kind,
+      fields: [
+        { key: 'from', value: parent.label },
+        { key: 'via', value: action.label.toLowerCase() },
+      ],
+    }
+
+    setNodes((prev) => [...prev, child])
+    setEdges((prev) => [
+      ...prev,
+      {
+        id: `e${id}`,
+        from: parent.id,
+        to: id,
+        label: action.label,
+        actionId: action.id,
+        angle,
+      },
+    ])
+    setOpenIds((prev) => new Set(prev).add(parent.id))
+    setLog(`${action.label} → ${child.label}`)
+  }
+
+  return (
+    <main
+      ref={frameRef}
+      className={panning ? 'stage stage--panning' : 'stage'}
+      data-grid={settings.showGrid || undefined}
+      style={{
+        // Grid lives on the frame so it can scroll and scale with the view.
+        backgroundSize: `${settings.gridSize * viewport.zoom}px ${settings.gridSize * viewport.zoom}px`,
+        backgroundPosition: `calc(50% + ${viewport.x}px) calc(50% + ${viewport.y}px)`,
+      }}
+    >
+      <div
+        ref={surfaceRef}
+        className="stage-surface"
+        style={{
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        }}
+      >
+        <Edges
+          nodes={nodes}
+          edges={edges}
+          radius={settings.nodeRadius}
+          openIds={openIds}
+          menuRadius={menuRadius}
+          width={size.width}
+          height={size.height}
+        />
+
+        {/* Rings: beneath the link layer. */}
+        {nodes
+          .filter((node) => openIds.has(node.id))
+          .map((node) => (
+            <div
+              className="node-slot node-slot--menu"
+              key={node.id}
+              style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
+            >
+              <RadialMenu
+                actions={ACTIONS}
+                radius={menuRadius}
+                innerRadius={holeRadius}
+                onSelect={(action, angle) => handleSelect(node, action, angle)}
+                onDismiss={() => toggle(node.id)}
+                selectedIds={edges
+                  .filter((e) => e.from === node.id)
+                  .map((e) => e.actionId)}
+              />
+            </div>
+          ))}
+
+        {/* Nodes: above the link layer. */}
+        {nodes.map((node) => (
+          <div
+            className="node-slot node-slot--node"
+            key={node.id}
+            style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
+          >
+            <Node
+              node={node}
+              radius={settings.nodeRadius}
+              open={openIds.has(node.id)}
+              onPress={() => toggle(node.id)}
+              onFocus={() => focusNode(node)}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="stage-controls">
+        <button onClick={fitAll} title="Fit all (F)">
+          ⤢
+        </button>
+        <button onClick={resetView} title="Reset view (0)">
+          ⌖
+        </button>
+        <span className="stage-zoom">{Math.round(viewport.zoom * 100)}%</span>
+      </div>
+
+      {log && <div className="stage-log">{log}</div>}
+    </main>
+  )
+}
