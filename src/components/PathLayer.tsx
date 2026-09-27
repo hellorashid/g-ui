@@ -98,6 +98,7 @@ export default function PathLayer({
                 .filter(Boolean)
                 .join(' ')}
               key={gpath.id}
+              data-angle={gpath.angle}
             >
               <path d={`M ${x1} ${y1} L ${x2} ${y2}`} />
               {/* Anchor dot on the wedge rim it departs from. */}

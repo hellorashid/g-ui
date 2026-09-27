@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { seedGraph } from './helpers.mjs'
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const b = await chromium.launch({ executablePath: CHROME })
@@ -30,6 +31,7 @@ const nodeCentre = (i = 0) => p.evaluate((i) => {
 }, i)
 
 await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
+await seedGraph(p)
 
 console.log('\nzoom')
 const before = await vp()
@@ -80,7 +82,7 @@ const reset = await vp()
 check('0 resets view', reset.zoom === 1 && Math.abs(reset.x) < 1 && Math.abs(reset.y) < 1, JSON.stringify(reset))
 
 // build a graph that extends well past the viewport, then fit
-await p.click('.node'); await p.waitForSelector('.wedge')
+await p.locator('.node:not(.node--input)').first().click(); await p.waitForSelector('.wedge')
 // Pick distinct actions: re-picking a used one reveals its node
 // instead of spawning a second.
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(1).click()
@@ -88,7 +90,7 @@ await waitSettled()
 await p.locator('.node-slot--menu').nth(1).locator('.wedge').nth(2).click()
 await waitSettled()
 const n = await p.locator('.node').count()
-check('graph grew', n === 3, `${n} nodes`)
+check('graph grew', n === 4, `${n} nodes`)
 
 await p.keyboard.press('f'); await p.waitForTimeout(500)
 const fit = await vp()

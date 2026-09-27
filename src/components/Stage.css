@@ -54,7 +54,7 @@
 
 .stage-log {
   position: absolute;
-  left: 16px;
+  left: 62px;
   bottom: 14px;
   padding: 5px 10px;
   border-radius: 6px;
@@ -137,4 +137,31 @@
   font-size: 12px;
   line-height: 1.45;
   color: var(--text);
+}
+
+/* Creates a new input node. */
+.stage-add {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  z-index: 5;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  backdrop-filter: blur(6px);
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.stage-add:hover {
+  color: #0d0f13;
+  background: var(--accent);
+  border-color: var(--accent);
 }

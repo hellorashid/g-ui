@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { seedGraph } from './helpers.mjs'
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const b = await chromium.launch({ executablePath: CHROME })
@@ -34,7 +35,8 @@ const setSlider = async (label, v) => {
 }
 
 await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
-await p.locator('.node').first().click(); await p.waitForTimeout(250)
+await seedGraph(p)
+await p.locator('.node:not(.node--input)').first().click(); await p.waitForTimeout(250)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(0).click()  // Connect, straight up
 await waitSettled()
 

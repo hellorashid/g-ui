@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { seedGraph } from './helpers.mjs'
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const b = await chromium.launch({ executablePath: CHROME })
@@ -14,7 +15,8 @@ const waitFor = async (fn, timeout = 25000) => {
 }
 
 await p.goto('http://localhost:5173/?speed=4', { waitUntil: 'networkidle' })
-await p.locator('.node').first().click(); await p.waitForTimeout(250)
+await seedGraph(p)
+await p.locator('.node:not(.node--input)').first().click(); await p.waitForTimeout(250)
 
 console.log('\nthinking: small placeholder, no actions')
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(2).click()  // transform
@@ -56,7 +58,8 @@ check('node is full size', await p.evaluate(() => {
 
 console.log('\nthoughts appear on the path, not off it')
 await p.reload({ waitUntil: 'networkidle' })
-await p.locator('.node').first().click(); await p.waitForTimeout(250)
+await seedGraph(p)
+await p.locator('.node:not(.node--input)').first().click(); await p.waitForTimeout(250)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(2).click()
 await waitFor(async () => (await count('.thought')) >= 1)
 // Sample the dot's position repeatedly during its entry animation.

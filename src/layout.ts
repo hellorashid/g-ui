@@ -51,16 +51,17 @@ export function layout(nodes: GNode[], paths: GPath[], m: Metrics): Placed[] {
     const cached = done.get(node.id)
     if (cached) return cached
 
-    // A root — or a cycle, which we refuse to follow — sits at the origin.
+    // A root — or a cycle, which we refuse to follow — sits where it
+    // was seeded, defaulting to the origin.
     if (!node.origin || seen.has(node.id)) {
-      const root = { ...node, x: 0, y: 0 }
+      const root = { ...node, x: node.seed?.x ?? 0, y: node.seed?.y ?? 0 }
       done.set(node.id, root)
       return root
     }
 
     const parent = byId.get(node.origin.parentId)
     if (!parent) {
-      const orphan = { ...node, x: 0, y: 0 }
+      const orphan = { ...node, x: node.seed?.x ?? 0, y: node.seed?.y ?? 0 }
       done.set(node.id, orphan)
       return orphan
     }

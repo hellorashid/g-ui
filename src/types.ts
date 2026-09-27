@@ -25,6 +25,13 @@ export type NodeStatus = 'thinking' | 'generating' | 'idle'
 export const THINKING_RADIUS = 26
 
 /**
+ * What kind of thing a node is. An `input` holds an editable prompt
+ * and is where a graph starts; everything else is produced by an
+ * action and holds a computed value.
+ */
+export type NodeKind = 'input' | 'derived'
+
+/**
  * A data input/output on the canvas.
  *
  * Position is derived, not stored: a node's place is its parent's
@@ -54,6 +61,13 @@ export interface GNode {
   }
   /** Set while the producing path is still generating its thoughts. */
   status?: NodeStatus
+  /** Defaults to 'derived'. */
+  nodeKind?: NodeKind
+  /**
+   * Where a root node sits. Derived nodes get their position from the
+   * origin chain instead, so this is only set on roots.
+   */
+  seed?: { x: number; y: number }
 }
 
 /**

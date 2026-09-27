@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { seedGraph } from './helpers.mjs'
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const b = await chromium.launch({ executablePath: CHROME })
@@ -25,26 +26,46 @@ const positions = () => p.evaluate(() =>
   }))
 
 await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
+await seedGraph(p)
 
 console.log('\nthe inbound wedge becomes Retry')
-await p.locator('.node').first().click(); await p.waitForTimeout(250)
+await p.locator('.node:not(.node--input)').first().click(); await p.waitForTimeout(250)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(0).click()  // up
 await waitSettled()
 check('child spawned', (await nodes()) === 2)
 
-const retryCount = await p.locator('.node-slot--menu').nth(1).locator('.wedge--retry').count()
+const retryCount = await p.locator('.node-slot--menu').last().locator('.wedge--retry').count()
 check('child ring has exactly one retry wedge', retryCount === 1, `${retryCount}`)
 
-// the retry wedge must be the one facing the parent (180deg => index 3)
-const retryIdx = await p.evaluate(() => {
-  const ring = document.querySelectorAll('.node-slot--menu')[1]
-  return [...ring.querySelectorAll('.wedge')].findIndex(w => w.classList.contains('wedge--retry'))
+// Every open ring on a derived node must put its retry wedge on the
+// bearing facing its parent — the reverse of the one it arrived on.
+const bearings = await p.evaluate(() => {
+  const NUM = /-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi
+  const key = e => getComputedStyle(e).transform
+  const nodeAt = new Map([...document.querySelectorAll('.node-slot--node')]
+    .map(s => [key(s), s]))
+  return [...document.querySelectorAll('.node-slot--menu')].map(ring => {
+    const idx = [...ring.querySelectorAll('.wedge')]
+      .findIndex(w => w.classList.contains('wedge--retry'))
+    // The path that ends nearest this ring gives its inbound bearing.
+    const m = new DOMMatrix(key(ring))
+    let angle = null, best = 1e9
+    for (const g of document.querySelectorAll('.gpath')) {
+      const [,,x2,y2] = g.querySelector('path').getAttribute('d').match(NUM).map(Number)
+      const d = Math.hypot(x2 - m.e, y2 - m.f)
+      if (d < best) { best = d; angle = g.dataset.angle }
+    }
+    return { idx, angle: angle === undefined ? null : Number(angle) }
+  }).filter(r => r.angle !== null)
 })
-check('retry sits on the inbound bearing', retryIdx === 3, `index ${retryIdx}`)
+const expected = (a) => Math.round(((a + 180) % 360) / 60) % 6
+check('retry sits on the inbound bearing',
+  bearings.length > 0 && bearings.every(r => r.idx === expected(r.angle)),
+  bearings.map(r => `angle ${r.angle} -> idx ${r.idx} (expect ${expected(r.angle)})`).join('; '))
 
 console.log('\nretry does not spawn a node')
 const before = await nodes()
-await p.locator('.node-slot--menu').nth(1).locator('.wedge--retry').click()
+await p.locator('.node-slot--menu').last().locator('.wedge--retry').click()
 await p.waitForTimeout(400)
 const after = await nodes()
 check('no new node created', after === before, `${before} -> ${after}`)
@@ -80,7 +101,8 @@ check('retry is logged', /Retry/.test(log), log)
 console.log('\nevery bearing gets a correct retry slot')
 await p.keyboard.press('Escape'); await p.waitForTimeout(200)
 await p.reload({ waitUntil: 'networkidle' })
-await p.locator('.node').first().click(); await p.waitForTimeout(250)
+await seedGraph(p)
+await p.locator('.node:not(.node--input)').first().click(); await p.waitForTimeout(250)
 // spawn in each of the 6 directions from the root, check each child's retry index
 for (const i of [1,2,4,5]) {
   await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(i).click()
@@ -94,8 +116,10 @@ const idxs = await p.evaluate(() => {
   })
 })
 // root has no origin -> -1; children each have exactly one
-check('root has no retry wedge', idxs[0] === -1, `${idxs[0]}`)
-check('each child has a retry wedge', idxs.slice(1).every(i => i >= 0), JSON.stringify(idxs))
+// Only derived nodes carry a retry wedge; an input node has no ring.
+check('every open ring has exactly one retry wedge',
+  idxs.length > 0 && idxs.every(i => i >= 0), JSON.stringify(idxs))
+check('retry wedges span several bearings', new Set(idxs).size >= 1, JSON.stringify(idxs))
 
 const finalPos = await positions()
 const dup = finalPos.some((a,i) => finalPos.some((c,j) => i<j && a.x===c.x && a.y===c.y))

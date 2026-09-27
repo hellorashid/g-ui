@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { seedGraph } from './helpers.mjs'
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const b = await chromium.launch({ executablePath: CHROME })
@@ -31,21 +32,24 @@ const wedge = async (n, i) => {
 }
 
 await p.goto('http://localhost:5173/?speed=20', { waitUntil: 'networkidle' })
+const base = await seedGraph(p)
+// The seeded graph already holds an input plus its output.
+const BASE_NODES = 2
 
 console.log('\nrule 1: clicking a node opens its radial menu')
 check('no rings initially', (await rings()) === 0)
-await p.locator('.node').first().click(); await p.waitForTimeout(300)
+await p.locator('.node:not(.node--input)').first().click(); await p.waitForTimeout(300)
 check('click opens a ring', (await rings()) === 1, `${await rings()} rings`)
 
 console.log('\nrule 2: selecting an action opens its connected node')
 await wedge(0, 1)
-check('spawned a node', (await nodes()) === 2, `${await nodes()} nodes`)
+check('spawned a node', (await nodes()) === BASE_NODES + 1, `${await nodes()} nodes`)
 check('child ring opens once it settles', (await rings()) === 2, `${await rings()} rings`)
 
 console.log('\nrule 3: selected items stay open; others hide')
 // Open a third node from the child, then click a plain node.
 await wedge(1, 2)
-check('chain grew to 3', (await nodes()) === 3, `${await nodes()} nodes`)
+check('chain grew', (await nodes()) === BASE_NODES + 2, `${await nodes()} nodes`)
 const beforePins = await rings()
 check('three rings open along the chain', beforePins === 3, `${beforePins} rings`)
 
@@ -61,11 +65,11 @@ const openOn = () => p.evaluate(() => {
 })
 
 // Clicking the ORIGINAL node drops the browsing ring, keeps the pinned ones.
-await p.locator('.node').first().click(); await p.waitForTimeout(350)
+await p.locator('.node:not(.node--input)').first().click(); await p.waitForTimeout(350)
 const owners = await openOn()
 check('clicking original keeps pinned rings', owners.length === 2, `open on ${JSON.stringify(owners)}`)
 check('the two pinned rings are the ones with selections',
-  owners.includes('input') && owners.includes('inspect'), JSON.stringify(owners))
+  owners.includes('output') && owners.includes('inspect'), JSON.stringify(owners))
 check('the leaf browsing ring closed', !owners.includes('transform'), JSON.stringify(owners))
 
 console.log('\nrule 4: re-selecting a used action reveals its node')

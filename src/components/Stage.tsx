@@ -4,7 +4,7 @@ import { useViewportActions } from '../hooks/useViewportActions'
 import PathLayer, { type HoveredThought } from './PathLayer'
 import Node from './Node'
 import RadialMenu from './RadialMenu'
-import { layout } from '../layout'
+import { layout, type Placed } from '../layout'
 import { useGeneration } from '../hooks/useGeneration'
 import { thoughtsFor } from '../thoughts'
 import { THOUGHT_KINDS, type GPath, type GNode, type RadialAction, type UiSettings } from '../types'
@@ -62,21 +62,22 @@ function actionsFor(node: GNode): RadialAction[] {
   return ACTIONS.map((a, i) => (i === slot ? RETRY : a))
 }
 
-const ROOT: GNode = {
-  id: 'n1',
+/** A fresh input node, ready for a prompt. */
+const makeInput = (id: string, x = 0, y = 0): GNode => ({
+  id,
   label: 'input',
-  value: '42',
-  kind: 'number',
-  fields: [
-    { key: 'source', value: 'sensor.a' },
-    { key: 'updated', value: '2s ago' },
-    { key: 'out', value: '0 links' },
-  ],
-}
+  value: '',
+  kind: 'prompt',
+  nodeKind: 'input',
+  fields: [],
+  seed: { x, y },
+})
+
+const ROOT = makeInput('n1')
 
 /**
  * The main desktop: where the visual interface gets rendered.
- * No chrome — the surface runs gpath to gpath.
+ * No chrome — the surface runs edge to edge.
  */
 export default function Stage({ settings }: Props) {
   const [nodes, setNodes] = useState<GNode[]>([ROOT])
@@ -223,6 +224,75 @@ export default function Stage({ settings }: Props) {
     setLog(`Retry → ${node.label} (${actionId})`)
   }
 
+  const setValue = (id: string, value: string) =>
+    setNodes((prev) => prev.map((n) => (n.id === id ? { ...n, value } : n)))
+
+  /**
+   * Run an input node's prompt: spawn the first output below it and
+   * start generating the path that leads there.
+   */
+  const runInput = (node: Placed) => {
+    if (!node.value.trim()) return
+    // One output per input; re-running reveals the existing one.
+    const already = paths.find((p) => p.from === node.id)
+    if (already) {
+      setBrowsingId(already.to)
+      return
+    }
+
+    const id = `n${++seq.current}`
+    const pathId = `e${id}`
+    const chain = thoughtsFor('output', pathId)
+    // Straight down, so a prompt reads top to bottom.
+    const angle = 180
+
+    setNodes((prev) => [
+      ...prev,
+      {
+        id,
+        label: 'output',
+        value: '…',
+        kind: 'result',
+        fields: [{ key: 'from', value: node.label }],
+        origin: { parentId: node.id, actionId: 'output', angle },
+        status: 'thinking',
+      },
+    ])
+    setPaths((prev) => [
+      ...prev,
+      {
+        id: pathId,
+        from: node.id,
+        to: id,
+        label: 'Output',
+        actionId: 'output',
+        angle,
+        thoughts: [],
+        status: 'pending',
+      },
+    ])
+    generate(pathId, id, chain)
+    setBrowsingId(id)
+    setLog(`Run → ${node.value.trim().slice(0, 40)}`)
+  }
+
+  /**
+   * Drop a fresh input node clear of everything already placed.
+   * Outputs grow downward, so new inputs go to the right — otherwise
+   * a new prompt would land on top of an existing node's output.
+   */
+  const addInput = () => {
+    const id = `n${++seq.current}`
+    const right = placed.length
+      ? Math.max(...placed.map((n) => n.x)) + menuRadius + settings.nodeRadius + 180
+      : 0
+    const top = placed.length ? Math.min(...placed.map((n) => n.y)) : 0
+    setNodes((prev) => [...prev, makeInput(id, right, top)])
+    setBrowsingId(null)
+    focusNode({ ...makeInput(id, right, top), x: right, y: top })
+    setLog('New input')
+  }
+
   /** Selecting an action that already spawned a node re-opens that node. */
   const handleReselect = (parent: GNode, action: RadialAction) => {
     const existing = paths.find(
@@ -323,6 +393,8 @@ export default function Stage({ settings }: Props) {
               open={openIds.has(node.id) && isIdle(node)}
               onPress={() => pressNode(node.id)}
               onFocus={() => focusNode(node)}
+              onChangeValue={(v) => setValue(node.id, v)}
+              onSubmit={() => runInput(node)}
             />
           </div>
         ))}
@@ -337,6 +409,10 @@ export default function Stage({ settings }: Props) {
         </button>
         <span className="stage-zoom">{Math.round(viewport.zoom * 100)}%</span>
       </div>
+
+      <button className="stage-add" onClick={addInput} title="New input node">
+        +
+      </button>
 
       {log && <div className="stage-log">{log}</div>}
     </main>
