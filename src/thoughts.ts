@@ -8,7 +8,6 @@ import type { Thought, ThoughtType } from './types'
 const CHAINS: Record<string, [ThoughtType, string][]> = {
   connect: [
     ['observe', 'Source node holds a scalar value of 42'],
-    ['retrieve', 'Found 3 compatible inputs downstream'],
     ['decide', 'Linking as a direct reference, no coercion needed'],
   ],
   inspect: [
@@ -19,17 +18,19 @@ const CHAINS: Record<string, [ThoughtType, string][]> = {
   ],
   transform: [
     ['observe', 'Input arrives as an unbounded number'],
+    ['retrieve', 'Loaded the downstream stage’s accepted range'],
     ['infer', 'A clamp is needed before the next stage'],
     ['decide', 'Applying ƒ(x) = min(max(x, 0), 100)'],
     ['verify', 'Output stays within the expected domain'],
+    ['verify', 'Re-ran against 200 historical samples, no clipping'],
   ],
   duplicate: [
     ['observe', 'Node has no side effects to preserve'],
     ['decide', 'Copying value and type, dropping upstream links'],
-    ['verify', 'Clone is independent of the original'],
   ],
   filter: [
     ['observe', 'Stream contains occasional negative spikes'],
+    ['retrieve', 'Compared against the sensor’s rated floor'],
     ['infer', 'Spikes are sensor noise, not signal'],
     ['decide', 'Gating on x > 0'],
     ['verify', '94% of samples pass the gate'],

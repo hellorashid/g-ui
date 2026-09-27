@@ -9,9 +9,9 @@ const defaultSettings: UiSettings = {
   gridSize: 32,
   density: 'comfortable',
   accent: '#6e8bff',
-  nodeRadius: 72,
-  menuRadius: 178,
-  spawnGap: 190,
+  nodeRadius: 100,
+  menuRadius: 180,
+  spawnGap: 320,
 }
 
 export default function App() {

@@ -25,33 +25,41 @@ const setSlider = async (label, v) => {
 
 await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
 await p.locator('.node').first().click(); await p.waitForTimeout(250)
-await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(0).click()  // straight up
+await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(0).click()  // Connect, straight up
 await p.waitForTimeout(350)
+
+// Layout constants, mirrored from src/layout.ts.
+const NODE_R = 100, MENU_R = 180, BASE = 3, PER = 52
+const thoughts = await p.locator('.gpath').first().locator('.thought').count()
+// reach = menuRadius + nodeRadius + gapFor(thoughts, spawnGap)
+const reachAt = (gap, nodeR = NODE_R) =>
+  MENU_R + nodeR + Math.max(90, gap + (thoughts - BASE) * PER)
 
 console.log('\nspawn gap moves existing nodes')
 const shown190 = await setSlider('Spawn gap', 190)
 const at190 = await positions()
 check('label reflects the value', shown190 === '190px', shown190)
-check('child at reach 440', at190.link[1] === -440, JSON.stringify(at190.link))
+check('child sits at the computed reach', at190.link[1] === -reachAt(190),
+  `${at190.link[1]} vs -${reachAt(190)} (${thoughts} thoughts)`)
 
 const shown320 = await setSlider('Spawn gap', 320)
 const at320 = await positions()
 check('label updates', shown320 === '320px', shown320)
-check('EXISTING node re-flows with the slider', at320.link[1] === -570,
-  `${at190.link[1]} -> ${at320.link[1]} (expect -570)`)
+check('EXISTING node re-flows with the slider', at320.link[1] === -reachAt(320),
+  `${at190.link[1]} -> ${at320.link[1]} (expect -${reachAt(320)})`)
 
 const shown120 = await setSlider('Spawn gap', 120)
 const at120 = await positions()
-check('slider pulls nodes back in', at120.link[1] === -370,
-  `${at320.link[1]} -> ${at120.link[1]} (expect -370)`)
+check('slider pulls nodes back in', at120.link[1] === -reachAt(120),
+  `${at320.link[1]} -> ${at120.link[1]} (expect -${reachAt(120)})`)
 
 console.log('\nnode radius also re-flows the graph')
 await setSlider('Spawn gap', 190)
 const beforeR = (await positions()).link[1]
-await setSlider('Node radius', 100)
+await setSlider('Node radius', 140)
 const afterR = (await positions()).link[1]
 check('larger nodes push children out', afterR < beforeR, `${beforeR} -> ${afterR}`)
-await setSlider('Node radius', 72)
+await setSlider('Node radius', NODE_R)
 
 console.log('\ndeep chains stay consistent')
 await p.locator('.node-slot--menu').nth(1).locator('.wedge').nth(1).click()
@@ -59,10 +67,15 @@ await p.waitForTimeout(350)
 const chain = await positions()
 check('three nodes placed', Object.keys(chain).length === 3, JSON.stringify(chain))
 // grandchild = child + one reach along its own bearing
-const reach = 178 + 72 + 190
-const expX = Math.round(chain.link[0] + Math.cos((60-90)*Math.PI/180) * reach)
-const expY = Math.round(chain.link[1] + Math.sin((60-90)*Math.PI/180) * reach)
 const gk = Object.keys(chain).find(k => k !== 'input' && k !== 'link')
+// The grandchild's own path may carry a different number of thoughts.
+const gThoughts = await p.evaluate(() =>
+  Math.min(...[...document.querySelectorAll('.gpath')].map(g => g.querySelectorAll('.thought').length)) === 0
+    ? 0
+    : [...document.querySelectorAll('.gpath')].map(g => g.querySelectorAll('.thought').length)[1])
+const gReach = MENU_R + NODE_R + Math.max(90, 190 + (gThoughts - BASE) * PER)
+const expX = Math.round(chain.link[0] + Math.cos((60-90)*Math.PI/180) * gReach)
+const expY = Math.round(chain.link[1] + Math.sin((60-90)*Math.PI/180) * gReach)
 check('grandchild placed off its own parent', Math.abs(chain[gk][0]-expX) <= 1 && Math.abs(chain[gk][1]-expY) <= 1,
   `${JSON.stringify(chain[gk])} vs expected [${expX}, ${expY}]`)
 

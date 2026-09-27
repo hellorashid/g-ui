@@ -98,7 +98,7 @@ export default function Stage({ settings }: Props) {
   const holeRadius = settings.nodeRadius + 14
   const menuRadius = Math.max(settings.menuRadius, holeRadius + MIN_BAND)
 
-  const placed = layout(nodes, {
+  const placed = layout(nodes, paths, {
     nodeRadius: settings.nodeRadius,
     menuRadius,
     spawnGap: settings.spawnGap,

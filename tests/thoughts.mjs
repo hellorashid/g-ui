@@ -65,6 +65,42 @@ const perPath = await p.evaluate(() =>
   [...document.querySelectorAll('.gpath')].map(g => g.querySelectorAll('.thought').length))
 check('every path has its own chain', perPath.length === 2 && perPath.every(n => n >= 3), JSON.stringify(perPath))
 
+console.log('\npath length grows with the chain')
+await p.keyboard.press('Escape'); await p.waitForTimeout(200)
+await p.reload({ waitUntil: 'networkidle' })
+await p.locator('.node').first().click(); await p.waitForTimeout(250)
+for (const i of [0,1,2,4]) {
+  await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(i).click()
+  await p.waitForTimeout(280)
+}
+const runs = await p.evaluate(() => {
+  const NUM = /-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi
+  const pos = {}
+  for (const s of document.querySelectorAll('.node-slot--node')) {
+    const m = new DOMMatrix(getComputedStyle(s).transform)
+    pos[s.querySelector('.node-label').textContent] = [m.e, m.f]
+  }
+  const root = pos['input']
+  return [...document.querySelectorAll('.gpath')].map(g => {
+    const [,,x2,y2] = g.querySelector('path').getAttribute('d').match(NUM).map(Number)
+    let best = null, bd = 1e9
+    for (const [k, v] of Object.entries(pos)) {
+      const d = Math.hypot(v[0]-x2, v[1]-y2); if (d < bd) { bd = d; best = k }
+    }
+    // Centre-to-centre, so the measure ignores which rings are open.
+    return { thoughts: g.querySelectorAll('.thought').length,
+             dist: Math.round(Math.hypot(pos[best][0]-root[0], pos[best][1]-root[1])) }
+  }).sort((a,b) => a.thoughts - b.thoughts)
+})
+check('chains vary in length', new Set(runs.map(r=>r.thoughts)).size >= 3,
+  JSON.stringify(runs.map(r=>r.thoughts)))
+check('more thoughts means a longer path',
+  runs.every((r,i) => i === 0 || r.dist > runs[i-1].dist),
+  runs.map(r => `${r.thoughts}t=${r.dist}px`).join(' '))
+const step = (runs[runs.length-1].dist - runs[0].dist) /
+             (runs[runs.length-1].thoughts - runs[0].thoughts)
+check('each thought adds a consistent length', Math.abs(step - 52) < 1, `${step.toFixed(1)}px per thought`)
+
 await p.keyboard.press('f'); await p.waitForTimeout(550)
 await p.locator('.thought').nth(1).hover(); await p.waitForTimeout(300)
 await p.screenshot({ path: 'tests/thoughts.png' })

@@ -98,7 +98,7 @@ export default function Sidebar({ collapsed, onToggle, settings, onChange, onRes
               <input
                 type="range"
                 min={40}
-                max={120}
+                max={180}
                 step={2}
                 value={settings.nodeRadius}
                 onChange={(e) => onChange('nodeRadius', Number(e.target.value))}
@@ -109,7 +109,7 @@ export default function Sidebar({ collapsed, onToggle, settings, onChange, onRes
               <input
                 type="range"
                 min={120}
-                max={320}
+                max={520}
                 step={5}
                 value={settings.spawnGap}
                 onChange={(e) => onChange('spawnGap', Number(e.target.value))}
@@ -120,7 +120,7 @@ export default function Sidebar({ collapsed, onToggle, settings, onChange, onRes
               <input
                 type="range"
                 min={130}
-                max={300}
+                max={360}
                 step={4}
                 value={settings.menuRadius}
                 onChange={(e) => onChange('menuRadius', Number(e.target.value))}
