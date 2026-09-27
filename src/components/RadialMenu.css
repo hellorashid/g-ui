@@ -111,3 +111,23 @@
   font-size: 10px;
   color: var(--muted);
 }
+
+/* The inbound wedge: re-runs the step instead of spawning. */
+.wedge--retry path {
+  fill: rgba(20, 24, 31, 0.97);
+  stroke: var(--border);
+  stroke-dasharray: 3 3;
+}
+
+.wedge--retry text {
+  fill: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+
+.wedge--retry:hover path {
+  fill: color-mix(in srgb, var(--accent) 55%, transparent);
+  stroke-dasharray: none;
+}
+
+.wedge--retry:hover text {
+  fill: #0d0f13;
+}

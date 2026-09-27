@@ -81,6 +81,7 @@ export default function RadialMenu({
                 'wedge',
                 active && 'wedge--active',
                 selected && 'wedge--selected',
+                action.retry && 'wedge--retry',
               ]
                 .filter(Boolean)
                 .join(' ')}

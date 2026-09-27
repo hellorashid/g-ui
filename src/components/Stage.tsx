@@ -33,6 +33,29 @@ const SPAWN: Record<string, { label: string; kind: string; value: string }> = {
 /** Thinnest the action ring may get before wedges stop being clickable. */
 const MIN_BAND = 56
 
+/**
+ * The wedge pointing back at a node's parent is the inbound link, so
+ * spawning there would drop a node on top of the parent. That slot
+ * becomes a retry of the action that produced this node instead.
+ */
+const RETRY: RadialAction = {
+  id: 'retry',
+  label: 'Retry',
+  icon: '↻',
+  hint: 'Run this step again',
+  retry: true,
+}
+
+/** Action ring for one node, with the inbound wedge swapped for Retry. */
+function actionsFor(node: GNode): RadialAction[] {
+  if (!node.origin) return ACTIONS
+  // The inbound direction is the reverse of the bearing we arrived on.
+  const back = (node.origin.angle + 180) % 360
+  const step = 360 / ACTIONS.length
+  const slot = Math.round(back / step) % ACTIONS.length
+  return ACTIONS.map((a, i) => (i === slot ? RETRY : a))
+}
+
 const ROOT: GNode = {
   id: 'n1',
   x: 0,
@@ -140,6 +163,7 @@ export default function Stage({ settings }: Props) {
         { key: 'from', value: parent.label },
         { key: 'via', value: action.label.toLowerCase() },
       ],
+      origin: { parentId: parent.id, actionId: action.id, angle },
     }
 
     setNodes((prev) => [...prev, child])
@@ -159,6 +183,25 @@ export default function Stage({ settings }: Props) {
     setPinnedIds((prev) => new Set(prev).add(parent.id))
     setBrowsingId(id)
     setLog(`${action.label} → ${child.label}`)
+  }
+
+  /**
+   * Re-run the step that produced this node. A placeholder for now:
+   * it bumps a counter and re-stamps the node so the action is visibly
+   * repeated; eventually this regenerates the value itself.
+   */
+  const handleRetry = (node: GNode) => {
+    if (!node.origin) return
+    const { actionId } = node.origin
+    setNodes((prev) =>
+      prev.map((n) => {
+        if (n.id !== node.id) return n
+        const runs = Number(n.fields.find((f) => f.key === 'runs')?.value ?? 1) + 1
+        const kept = n.fields.filter((f) => f.key !== 'runs')
+        return { ...n, fields: [...kept, { key: 'runs', value: String(runs) }] }
+      }),
+    )
+    setLog(`Retry → ${node.label} (${actionId})`)
   }
 
   /** Selecting an action that already spawned a node re-opens that node. */
@@ -212,13 +255,15 @@ export default function Stage({ settings }: Props) {
               style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
             >
               <RadialMenu
-                actions={ACTIONS}
+                actions={actionsFor(node)}
                 radius={menuRadius}
                 innerRadius={holeRadius}
                 onSelect={(action, angle) => {
-                  // Re-picking a used action reveals its node instead
-                  // of spawning a duplicate.
-                  if (!handleReselect(node, action)) {
+                  if (action.retry) {
+                    handleRetry(node)
+                  } else if (!handleReselect(node, action)) {
+                    // Re-picking a used action reveals its node
+                    // instead of spawning a duplicate.
                     handleSelect(node, action, angle)
                   }
                 }}

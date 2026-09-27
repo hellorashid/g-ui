@@ -23,6 +23,17 @@ export interface GNode {
   kind: string
   /** Extra rows rendered inside the circle when there is room. */
   fields: { key: string; value: string }[]
+  /**
+   * How this node came to exist. The wedge facing back along `angle`
+   * is the inbound link, so it becomes a retry of `actionId` rather
+   * than a spawn that would land on top of the parent.
+   */
+  origin?: {
+    parentId: string
+    actionId: string
+    /** Bearing from the parent that produced this node. */
+    angle: number
+  }
 }
 
 /** A link between two nodes, drawn as a curve. */
@@ -45,4 +56,6 @@ export interface RadialAction {
   icon: string
   /** Shown while the wedge is focused. */
   hint: string
+  /** Re-runs the action that produced this node instead of spawning. */
+  retry?: boolean
 }
