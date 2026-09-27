@@ -18,7 +18,13 @@ export default function Node({ node, radius, open, onPress, onFocus }: Props) {
 
   return (
     <button
-      className={open ? 'node node--open' : 'node'}
+      className={[
+        'node',
+        open && 'node--open',
+        node.status === 'pending' && 'node--pending',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{ width: radius * 2, height: radius * 2 }}
       onClick={(e) => {
         e.stopPropagation()

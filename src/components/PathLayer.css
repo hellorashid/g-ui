@@ -77,3 +77,50 @@
 .thought:hover text {
   fill: #0d0f13;
 }
+
+/* A path still working out its reasoning. */
+.gpath--pending path {
+  stroke-dasharray: 5 5;
+  animation: path-crawl 640ms linear infinite;
+}
+
+@keyframes path-crawl {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* The frontier of a generating path. */
+.path-head {
+  fill: var(--accent);
+  animation: head-pulse 1100ms ease-in-out infinite;
+}
+
+@keyframes head-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    r: 4;
+  }
+  50% {
+    opacity: 0.45;
+    r: 6;
+  }
+}
+
+/*
+ * Each thought fades in as it lands. The animation sits on an inner
+ * group: the outer .thought carries the translate that positions it,
+ * and a CSS transform here would overwrite that.
+ */
+.thought-in {
+  animation: thought-land 240ms ease-out;
+  transform-origin: center;
+}
+
+@keyframes thought-land {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}

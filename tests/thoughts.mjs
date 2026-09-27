@@ -6,10 +6,20 @@ const p = await b.newPage({ viewport: { width: 1500, height: 950 } })
 const fails = []
 const check = (n, c, x='') => { console.log(`${c?'  ok  ':' FAIL '} ${n}${x?' — '+x:''}`); if(!c) fails.push(n) }
 
+// Paths generate progressively; wait for every chain to land.
+const waitSettled = async (timeout = 25000) => {
+  const until = Date.now() + timeout
+  while (Date.now() < until) {
+    if ((await p.locator('.gpath--pending').count()) === 0) return true
+    await p.waitForTimeout(250)
+  }
+  return false
+}
+
 await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
 await p.locator('.node').first().click(); await p.waitForTimeout(250)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(1).click()  // Inspect
-await p.waitForTimeout(400)
+await waitSettled()
 
 console.log('\nthoughts render along the path')
 const dots = await p.locator('.thought').count()
@@ -60,7 +70,7 @@ console.log('\nchains differ per action')
 await p.locator('.node').first().click(); await p.waitForTimeout(200)
 await p.locator('.node').first().click(); await p.waitForTimeout(200)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(4).click()  // Filter
-await p.waitForTimeout(400)
+await waitSettled()
 const perPath = await p.evaluate(() =>
   [...document.querySelectorAll('.gpath')].map(g => g.querySelectorAll('.thought').length))
 check('every path has its own chain', perPath.length === 2 && perPath.every(n => n >= 3), JSON.stringify(perPath))
@@ -73,6 +83,7 @@ for (const i of [0,1,2,4]) {
   await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(i).click()
   await p.waitForTimeout(280)
 }
+await waitSettled()
 const runs = await p.evaluate(() => {
   const NUM = /-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi
   const pos = {}

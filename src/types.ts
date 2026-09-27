@@ -11,6 +11,9 @@ export interface UiSettings {
   spawnGap: number
 }
 
+/** A node is provisional until the path that produces it settles. */
+export type NodeStatus = 'pending' | 'settled'
+
 /**
  * A data input/output on the canvas.
  *
@@ -39,6 +42,8 @@ export interface GNode {
     /** Bearing from the parent that produced this node. */
     angle: number
   }
+  /** Set while the producing path is still generating its thoughts. */
+  status?: NodeStatus
 }
 
 /**
@@ -82,6 +87,11 @@ export interface GPath {
   angle: number
   /** The reasoning chain that produced the target node. */
   thoughts: Thought[]
+  /**
+   * Thoughts arrive one at a time while the path generates. A path is
+   * `pending` until the whole chain has landed, then `settled`.
+   */
+  status: 'pending' | 'settled'
 }
 
 /** One wedge of a radial menu. */

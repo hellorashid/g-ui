@@ -113,3 +113,23 @@
 .node--open .node-port {
   border-color: var(--accent);
 }
+
+/* Provisional: the path that produces this node is still generating. */
+.node--pending {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
+.node--pending .node-value {
+  animation: node-settling 1400ms ease-in-out infinite;
+}
+
+@keyframes node-settling {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}

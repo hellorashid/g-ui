@@ -10,10 +10,11 @@
     "preview": "vite preview",
     "test:viewport": "node tests/viewport.mjs",
     "test:actions": "node tests/actions.mjs",
-    "test": "node tests/viewport.mjs && node tests/actions.mjs && node tests/retry.mjs && node tests/layout.mjs && node tests/thoughts.mjs",
+    "test": "node tests/viewport.mjs && node tests/actions.mjs && node tests/retry.mjs && node tests/layout.mjs && node tests/thoughts.mjs && node tests/generation.mjs",
     "test:retry": "node tests/retry.mjs",
     "test:layout": "node tests/layout.mjs",
-    "test:thoughts": "node tests/thoughts.mjs"
+    "test:thoughts": "node tests/thoughts.mjs",
+    "test:generation": "node tests/generation.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

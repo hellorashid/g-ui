@@ -6,6 +6,16 @@ const p = await b.newPage({ viewport: { width: 1500, height: 950 } })
 const fails = []
 const check = (n, c, x='') => { console.log(`${c?'  ok  ':' FAIL '} ${n}${x?' — '+x:''}`); if(!c) fails.push(n) }
 
+// Paths generate progressively; measure only once they have settled.
+const waitSettled = async (timeout = 25000) => {
+  const until = Date.now() + timeout
+  while (Date.now() < until) {
+    if ((await p.locator('.gpath--pending').count()) === 0) return true
+    await p.waitForTimeout(250)
+  }
+  return false
+}
+
 const positions = () => p.evaluate(() =>
   Object.fromEntries([...document.querySelectorAll('.node-slot--node')].map(s => {
     const m = new DOMMatrix(getComputedStyle(s).transform)
@@ -26,7 +36,7 @@ const setSlider = async (label, v) => {
 await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
 await p.locator('.node').first().click(); await p.waitForTimeout(250)
 await p.locator('.node-slot--menu').nth(0).locator('.wedge').nth(0).click()  // Connect, straight up
-await p.waitForTimeout(350)
+await waitSettled()
 
 // Layout constants, mirrored from src/layout.ts.
 const NODE_R = 100, MENU_R = 180, BASE = 3, PER = 52
@@ -63,7 +73,7 @@ await setSlider('Node radius', NODE_R)
 
 console.log('\ndeep chains stay consistent')
 await p.locator('.node-slot--menu').nth(1).locator('.wedge').nth(1).click()
-await p.waitForTimeout(350)
+await waitSettled()
 const chain = await positions()
 check('three nodes placed', Object.keys(chain).length === 3, JSON.stringify(chain))
 // grandchild = child + one reach along its own bearing

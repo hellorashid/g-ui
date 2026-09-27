@@ -5,6 +5,7 @@ import PathLayer, { type HoveredThought } from './PathLayer'
 import Node from './Node'
 import RadialMenu from './RadialMenu'
 import { layout } from '../layout'
+import { useGeneration } from '../hooks/useGeneration'
 import { thoughtsFor } from '../thoughts'
 import { THOUGHT_KINDS, type GPath, type GNode, type RadialAction, type UiSettings } from '../types'
 import './Stage.css'
@@ -76,7 +77,7 @@ const ROOT: GNode = {
  */
 export default function Stage({ settings }: Props) {
   const [nodes, setNodes] = useState<GNode[]>([ROOT])
-  const [paths, setEdges] = useState<GPath[]>([])
+  const [paths, setPaths] = useState<GPath[]>([])
   /**
    * Rings come in two flavours:
    *  - pinned: a node whose ring has a selected action, or which was
@@ -103,6 +104,8 @@ export default function Stage({ settings }: Props) {
     menuRadius,
     spawnGap: settings.spawnGap,
   })
+
+  const { generate } = useGeneration({ setPaths, setNodes })
 
   const { viewport, animateTo, panning } = useViewport({ ref: frameRef })
   const { fitAll, resetView, focusNode } = useViewportActions({
@@ -167,21 +170,29 @@ export default function Stage({ settings }: Props) {
         { key: 'via', value: action.label.toLowerCase() },
       ],
       origin: { parentId: parent.id, actionId: action.id, angle },
+      status: 'pending',
     }
 
+    // The path starts empty and fills in: thoughts arrive one by one
+    // until the chain is complete and the node settles.
+    const pathId = `e${id}`
+    const chain = thoughtsFor(action.id, pathId)
+
     setNodes((prev) => [...prev, child])
-    setEdges((prev) => [
+    setPaths((prev) => [
       ...prev,
       {
-        id: `e${id}`,
+        id: pathId,
         from: parent.id,
         to: id,
         label: action.label,
         actionId: action.id,
         angle,
-        thoughts: thoughtsFor(action.id, `e${id}`),
+        thoughts: [],
+        status: 'pending',
       },
     ])
+    generate(pathId, id, chain)
     // The parent's ring is now anchoring a link, so pin it; the new
     // node's own ring opens so the chain can be continued immediately.
     setPinnedIds((prev) => new Set(prev).add(parent.id))

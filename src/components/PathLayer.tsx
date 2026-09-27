@@ -83,11 +83,25 @@ export default function PathLayer({
           const usable = span - inset * 2
 
           return (
-            <g className={live ? 'gpath gpath--live' : 'gpath'} key={gpath.id}>
+            <g
+              className={[
+                'gpath',
+                live && 'gpath--live',
+                gpath.status === 'pending' && 'gpath--pending',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              key={gpath.id}
+            >
               <path d={`M ${x1} ${y1} L ${x2} ${y2}`} />
               {/* Anchor dot on the wedge rim it departs from. */}
               {live && <circle className="path-root" cx={x1} cy={y1} r={3.5} />}
-              <circle className="path-cap" cx={x2} cy={y2} r={3} />
+              {gpath.status === 'pending' ? (
+                // A pulsing head at the frontier of the reasoning.
+                <circle className="path-head" cx={x2} cy={y2} r={4} />
+              ) : (
+                <circle className="path-cap" cx={x2} cy={y2} r={3} />
+              )}
 
               {n > 0 &&
                 gpath.thoughts.map((t, i) => {
@@ -107,8 +121,10 @@ export default function PathLayer({
                       onPointerLeave={() => onHoverThought(null)}
                     >
                       <circle className="thought-hit" r={13} />
-                      <circle className="thought-dot" r={9} />
-                      <text dy="0.35em">{THOUGHT_KINDS[t.type].icon}</text>
+                      <g className="thought-in">
+                        <circle className="thought-dot" r={9} />
+                        <text dy="0.35em">{THOUGHT_KINDS[t.type].icon}</text>
+                      </g>
                     </g>
                   )
                 })}
