@@ -107,15 +107,41 @@ const inboxValue = await p.evaluate(() =>
   [...document.querySelectorAll('.node-value')].map(e => e.textContent))
 check('it shows the unread count', inboxValue.includes('12 new'), JSON.stringify(inboxValue))
 
+check('the inbox offers five actions', await p.evaluate(() =>
+  [...document.querySelectorAll('.node-slot--menu')].pop()
+    ?.querySelectorAll('.wedge:not(.wedge--retry)').length === 5),
+  `${await p.locator('.wedge:not(.wedge--retry)').count()} non-retry wedges`)
+
+// A deeper walk: inbox -> what needs me -> backstory -> root cause
+// -> draft -> read it -> send.
 check('picked Show What Needs Me', await pick('Show What Needs Me'))
 check('urgent turn appeared', (await labels()).includes('needs you'),
+  JSON.stringify(await labels()))
+check('picked Get The Backstory', await pick('Get The Backstory'))
+check('backstory turn appeared', (await labels()).includes('backstory'),
+  JSON.stringify(await labels()))
+check('picked Find The Root Cause', await pick('Find The Root Cause'))
+check('root cause turn appeared', (await labels()).includes('root cause'),
   JSON.stringify(await labels()))
 check('picked Draft A Reply', await pick('Draft A Reply'))
 check('draft turn appeared', (await labels()).includes('draft'),
   JSON.stringify(await labels()))
+check('picked Read It First', await pick('Read It First'))
+check('preview turn appeared', (await labels()).includes('draft text'),
+  JSON.stringify(await labels()))
 check('picked Send It', await pick('Send It'))
 check('reply was sent', (await labels()).includes('sent'),
   JSON.stringify(await labels()))
+
+const emailChain = await p.evaluate(() => {
+  const gs = [...document.querySelectorAll('.gpath')]
+  return { paths: gs.length,
+           longest: Math.max(...gs.map(g => g.querySelectorAll('.thought').length)) }
+})
+check('the email thread runs several turns deep', emailChain.paths >= 10,
+  JSON.stringify(emailChain))
+check('some chains reach seven or more thoughts', emailChain.longest >= 7,
+  `longest ${emailChain.longest}`)
 
 console.log('\nthe two demos stay separate')
 const mixed = await p.evaluate(() =>
